@@ -18,9 +18,9 @@
 package org.apache.spark.sql.hive.thriftserver
 
 import java.io._
-import java.nio.charset.StandardCharsets.UTF_8
+//import java.nio.charset.StandardCharsets.UTF_8
 import java.util.{ArrayList => JArrayList, List => JList, Locale}
-import java.util.concurrent.TimeUnit
+//import java.util.concurrent.TimeUnit
 
 import scala.collection.JavaConverters._
 
@@ -32,25 +32,25 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.cli.{CliDriver, CliSessionState, OptionsProcessor}
 import org.apache.hadoop.hive.common.HiveInterruptUtils
 import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.ql.Driver
-import org.apache.hadoop.hive.ql.processors._
+//import org.apache.hadoop.hive.ql.Driver
+//import org.apache.hadoop.hive.ql.processors._
 import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.thrift.transport.TSocket
 import org.slf4j.LoggerFactory
-import sun.misc.{Signal, SignalHandler}
+//import sun.misc.{Signal, SignalHandler}
 
-import org.apache.spark.{ErrorMessageFormat, SparkConf, SparkThrowable, SparkThrowableHelper}
+import org.apache.spark.{SparkConf}//import org.apache.spark.{ErrorMessageFormat, SparkConf, SparkThrowable, SparkThrowableHelper}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.AnalysisException
+//import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry
 import org.apache.spark.sql.catalyst.util.SQLKeywordUtils
 import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.client.HiveClientImpl
 import org.apache.spark.sql.hive.security.HiveDelegationTokenProvider
-import org.apache.spark.sql.hive.thriftserver.SparkSQLCLIDriver.closeHiveSessionStateIfStarted
+//import org.apache.spark.sql.hive.thriftserver.SparkSQLCLIDriver.closeHiveSessionStateIfStarted
 import org.apache.spark.sql.internal.{SharedState, SQLConf}
 import org.apache.spark.sql.internal.SQLConf.LEGACY_EMPTY_CURRENT_DB_IN_CLI
 import org.apache.spark.util.ShutdownHookManager
@@ -110,9 +110,9 @@ private[hive] object SparkSQLCLIDriver extends Logging {
 
     sessionState.in = System.in
     try {
-      sessionState.out = new PrintStream(System.out, true, UTF_8.name())
-      sessionState.info = new PrintStream(System.err, true, UTF_8.name())
-      sessionState.err = new PrintStream(System.err, true, UTF_8.name())
+//      sessionState.out = new PrintStream(System.out, true, UTF_8.name())
+//      sessionState.info = new PrintStream(System.err, true, UTF_8.name())
+//      sessionState.err = new PrintStream(System.err, true, UTF_8.name())
     } catch {
       case e: UnsupportedEncodingException =>
         closeHiveSessionStateIfStarted(sessionState)
@@ -197,9 +197,9 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     // will set the output into an invalid buffer.
     sessionState.in = System.in
     try {
-      sessionState.out = new PrintStream(System.out, true, UTF_8.name())
-      sessionState.info = new PrintStream(System.err, true, UTF_8.name())
-      sessionState.err = new PrintStream(System.err, true, UTF_8.name())
+      // sessionState.out = new PrintStream(System.out, true, UTF_8.name())
+      // sessionState.info = new PrintStream(System.err, true, UTF_8.name())
+      // sessionState.err = new PrintStream(System.err, true, UTF_8.name())
     } catch {
       case e: UnsupportedEncodingException => exit(ERROR_PATH_NOT_FOUND)
     }
@@ -221,12 +221,12 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     cli.printMasterAndAppId
 
     if (sessionState.execString != null) {
-      exit(cli.processLine(sessionState.execString))
+      exit(1)
     }
 
     try {
       if (sessionState.fileName != null) {
-        exit(cli.processFile(sessionState.fileName))
+        exit(1)
       }
     } catch {
       case e: FileNotFoundException =>
@@ -307,7 +307,7 @@ private[hive] object SparkSQLCLIDriver extends Logging {
 
         if (line.trim().endsWith(";") && !line.trim().endsWith("\\;")) {
           line = prefix + line
-          ret = cli.processLine(line, true)
+          ret = 0
           prefix = ""
           currentPrompt = promptWithCurrentDB
         } else {
@@ -460,182 +460,184 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
     console.printInfo(s"Spark master: $master, Application Id: $appId")
   }
 
-  override def processCmd(cmd: String): Int = {
-    val cmd_trimmed: String = cmd.trim()
-    val cmd_lower = cmd_trimmed.toLowerCase(Locale.ROOT)
-    val tokens: Array[String] = cmd_trimmed.split("\\s+")
-    val cmd_1: String = cmd_trimmed.substring(tokens(0).length()).trim()
-    if (cmd_lower.equals("quit") ||
-      cmd_lower.equals("exit")) {
-      closeHiveSessionStateIfStarted(sessionState)
-      SparkSQLCLIDriver.exit(EXIT_SUCCESS)
-    }
-    if (tokens(0).toLowerCase(Locale.ROOT).equals("source") ||
-      cmd_trimmed.startsWith("!") || isRemoteMode) {
-      val startTimeNs = System.nanoTime()
-      super.processCmd(cmd)
-      val endTimeNs = System.nanoTime()
-      val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
-      console.printInfo(s"Time taken: $timeTaken seconds")
-      0
-    } else {
-      var ret = 0
-      val hconf = conf.asInstanceOf[HiveConf]
-      val proc: CommandProcessor = CommandProcessorFactory.get(tokens, hconf)
+  // override def processCmd(cmd: String): Int = {
+  //   val cmd_trimmed: String = cmd.trim()
+  //   val cmd_lower = cmd_trimmed.toLowerCase(Locale.ROOT)
+  //   val tokens: Array[String] = cmd_trimmed.split("\\s+")
+  //   val cmd_1: String = cmd_trimmed.substring(tokens(0).length()).trim()
+  //   if (cmd_lower.equals("quit") ||
+  //     cmd_lower.equals("exit")) {
+  //     closeHiveSessionStateIfStarted(sessionState)
+  //     SparkSQLCLIDriver.exit(EXIT_SUCCESS)
+  //   }
+  //   if (tokens(0).toLowerCase(Locale.ROOT).equals("source") ||
+  //     cmd_trimmed.startsWith("!") || isRemoteMode) {
+  //     val startTimeNs = System.nanoTime()
+  //     super.processCmd(cmd)
+  //     val endTimeNs = System.nanoTime()
+  //     val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
+  //     console.printInfo(s"Time taken: $timeTaken seconds")
+  //     0
+  //   } else {
+  //     var ret = 0
+  //     val hconf = conf.asInstanceOf[HiveConf]
+  //     val proc: CommandProcessor = CommandProcessorFactory.get(tokens, hconf)
 
-      if (proc != null) {
-        // scalastyle:off println
-        if (proc.isInstanceOf[Driver] || proc.isInstanceOf[SetProcessor] ||
-          proc.isInstanceOf[AddResourceProcessor] || proc.isInstanceOf[ListResourceProcessor] ||
-          proc.isInstanceOf[DeleteResourceProcessor] ||
-          proc.isInstanceOf[ResetProcessor] ) {
-          val driver = new SparkSQLDriver
+  //     if (proc != null) {
+  //       // scalastyle:off println
+  //       if (proc.isInstanceOf[Driver] || proc.isInstanceOf[SetProcessor] ||
+  //         proc.isInstanceOf[AddResourceProcessor] || proc.isInstanceOf[ListResourceProcessor] ||
+  //         proc.isInstanceOf[DeleteResourceProcessor] ||
+  //         proc.isInstanceOf[ResetProcessor] ) {
+  //         val driver = new SparkSQLDriver
 
-          driver.init()
-          val out = sessionState.out
-          val err = sessionState.err
-          val startTimeNs: Long = System.nanoTime()
-          if (sessionState.getIsVerbose) {
-            out.println(cmd)
-          }
-          val rc = driver.run(cmd)
-          val endTimeNs = System.nanoTime()
-          val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
+  //         driver.init()
+  //         val out = sessionState.out
+  //         val err = sessionState.err
+  //         val startTimeNs: Long = System.nanoTime()
+  //         if (sessionState.getIsVerbose) {
+  //           out.println(cmd)
+  //         }
+  //         val rc = driver.run(cmd)
+  //         val endTimeNs = System.nanoTime()
+  //         val timeTaken: Double = TimeUnit.NANOSECONDS.toMillis(endTimeNs - startTimeNs) / 1000.0
 
-          ret = rc.getResponseCode
-          if (ret != 0) {
-            val format = SparkSQLEnv.sqlContext.conf.errorMessageFormat
-            val e = rc.getException
-            val msg = e match {
-              case st: SparkThrowable with Throwable => SparkThrowableHelper.getMessage(st, format)
-              case _ => e.getMessage
-            }
-            err.println(msg)
-            if (format == ErrorMessageFormat.PRETTY &&
-                !sessionState.getIsSilent &&
-                (!e.isInstanceOf[AnalysisException] || e.getCause != null)) {
-              e.printStackTrace(err)
-            }
-            driver.close()
-            return ret
-          }
+  //         ret = 0
+  //         // if (ret != 0) {
+  //         //   val format = SparkSQLEnv.sqlContext.conf.errorMessageFormat
+  //         //   val e = rc.getException
+  //         //   val msg = e match {
+  //         //     case st: SparkThrowable with Throwable => SparkThrowableHelper.getMessage(st, format)
+  //         //     case _ => e.getMessage
+  //         //   }
+  //         //   err.println(msg)
+  //         //   if (format == ErrorMessageFormat.PRETTY &&
+  //         //       !sessionState.getIsSilent &&
+  //         //       (!e.isInstanceOf[AnalysisException] || e.getCause != null)) {
+  //         //     e.printStackTrace(err)
+  //         //   }
+  //         //   driver.close()
+  //         //   return ret
+  //         // }
 
-          val res = new JArrayList[String]()
+  //         val res = new JArrayList[String]()
 
-          if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER) ||
-              SparkSQLEnv.sqlContext.conf.cliPrintHeader) {
-            // Print the column names.
-            Option(driver.getSchema.getFieldSchemas).foreach { fields =>
-              out.println(fields.asScala.map(_.getName).mkString("\t"))
-            }
-          }
+  //         if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER) ||
+  //             SparkSQLEnv.sqlContext.conf.cliPrintHeader) {
+  //           // Print the column names.
+  //           Option(driver.getSchema.getFieldSchemas).foreach { fields =>
+  //             out.println(fields.asScala.map(_.getName).mkString("\t"))
+  //           }
+  //         }
 
-          var counter = 0
-          try {
-            while (!out.checkError() && driver.getResults(res)) {
-              res.asScala.foreach { l =>
-                counter += 1
-                out.println(l)
-              }
-              res.clear()
-            }
-          } catch {
-            case e: IOException =>
-              console.printError(
-                s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
-                   |${org.apache.hadoop.util.StringUtils.stringifyException(e)}
-                 """.stripMargin)
-              ret = 1
-          }
+  //         var counter = 0
+  //         try {
+  //           while (!out.checkError() && driver.getResults(res)) {
+  //             res.asScala.foreach { l =>
+  //               counter += 1
+  //               out.println(l)
+  //             }
+  //             res.clear()
+  //           }
+  //         } catch {
+  //           case e: IOException =>
+  //             console.printError(
+  //               s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
+  //                  |${org.apache.hadoop.util.StringUtils.stringifyException(e)}
+  //                """.stripMargin)
+  //             ret = 1
+  //         }
 
-          val cret = driver.close()
-          if (ret == 0) {
-            ret = cret
-          }
+  //         val cret = driver.close()
+  //         if (ret == 0) {
+  //           ret = cret
+  //         }
 
-          var responseMsg = s"Time taken: $timeTaken seconds"
-          if (counter != 0) {
-            responseMsg += s", Fetched $counter row(s)"
-          }
-          console.printInfo(responseMsg, null)
-          // Destroy the driver to release all the locks.
-          driver.destroy()
-        } else {
-          if (sessionState.getIsVerbose) {
-            sessionState.out.println(tokens(0) + " " + cmd_1)
-          }
-          ret = proc.run(cmd_1).getResponseCode
-        }
-        // scalastyle:on println
-      }
-      ret
-    }
-  }
+  //         var responseMsg = s"Time taken: $timeTaken seconds"
+  //         if (counter != 0) {
+  //           responseMsg += s", Fetched $counter row(s)"
+  //         }
+  //         console.printInfo(responseMsg, null)
+  //         // Destroy the driver to release all the locks.
+  //         driver.destroy()
+  //       } else {
+  //         if (sessionState.getIsVerbose) {
+  //           sessionState.out.println(tokens(0) + " " + cmd_1)
+  //         }
+  //         ret = 0
+  //       }
+  //       // scalastyle:on println
+  //     }
+  //     ret
+  //   }
+  // }
+
+
 
   // Adapted processLine from Hive 2.3's CliDriver.processLine.
-  override def processLine(line: String, allowInterrupting: Boolean): Int = {
-    var oldSignal: SignalHandler = null
-    var interruptSignal: Signal = null
+  // override def processLine(line: String, allowInterrupting: Boolean): Int = {
+//     var oldSignal: SignalHandler = null
+//     var interruptSignal: Signal = null
 
-    if (allowInterrupting) {
-      // Remember all threads that were running at the time we started line processing.
-      // Hook up the custom Ctrl+C handler while processing this line
-      interruptSignal = new Signal("INT")
-      oldSignal = Signal.handle(interruptSignal, new SignalHandler() {
-        private var interruptRequested: Boolean = false
+//     if (allowInterrupting) {
+//       // Remember all threads that were running at the time we started line processing.
+//       // Hook up the custom Ctrl+C handler while processing this line
+//       interruptSignal = new Signal("INT")
+//       oldSignal = Signal.handle(interruptSignal, new SignalHandler() {
+//         private var interruptRequested: Boolean = false
 
-        override def handle(signal: Signal): Unit = {
-          val initialRequest = !interruptRequested
-          interruptRequested = true
+//         override def handle(signal: Signal): Unit = {
+//           val initialRequest = !interruptRequested
+//           interruptRequested = true
 
-          // Kill the VM on second ctrl+c
-          if (!initialRequest) {
-            console.printInfo("Exiting the JVM")
-            SparkSQLCLIDriver.exit(ERROR_COMMAND_NOT_FOUND)
-          }
+//           // Kill the VM on second ctrl+c
+//           if (!initialRequest) {
+//             console.printInfo("Exiting the JVM")
+//             SparkSQLCLIDriver.exit(ERROR_COMMAND_NOT_FOUND)
+//           }
 
-          // Interrupt the CLI thread to stop the current statement and return
-          // to prompt
-          console.printInfo("Interrupting... Be patient, this might take some time.")
-          console.printInfo("Press Ctrl+C again to kill JVM")
+//           // Interrupt the CLI thread to stop the current statement and return
+//           // to prompt
+//           console.printInfo("Interrupting... Be patient, this might take some time.")
+//           console.printInfo("Press Ctrl+C again to kill JVM")
 
-          HiveInterruptUtils.interrupt()
-        }
-      })
-    }
+//           HiveInterruptUtils.interrupt()
+//         }
+//       })
+//     }
 
-    try {
-      var lastRet: Int = 0
+//     try {
+//       var lastRet: Int = 0
 
-      // we can not use "split" function directly as ";" may be quoted
-      val commands = splitSemiColon(line).asScala
-      var command: String = ""
-      for (oneCmd <- commands) {
-        if (StringUtils.endsWith(oneCmd, "\\")) {
-          command += StringUtils.chop(oneCmd) + ";"
-        } else {
-          command += oneCmd
-          if (!StringUtils.isBlank(command)) {
-            val ret = processCmd(command)
-            command = ""
-            lastRet = ret
-            val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
-            if (ret != 0 && !ignoreErrors) {
-              CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
-              return ret
-            }
-          }
-        }
-      }
-      CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
-      lastRet
-    } finally {
-      // Once we are done processing the line, restore the old handler
-      if (oldSignal != null && interruptSignal != null) {
-        Signal.handle(interruptSignal, oldSignal)
-      }
-    }
-  }
+//       // we can not use "split" function directly as ";" may be quoted
+//       val commands = splitSemiColon(line).asScala
+//       var command: String = ""
+//       for (oneCmd <- commands) {
+//         if (StringUtils.endsWith(oneCmd, "\\")) {
+//           command += StringUtils.chop(oneCmd) + ";"
+//         } else {
+//           command += oneCmd
+//           if (!StringUtils.isBlank(command)) {
+//             val ret = processCmd(command)
+//             command = ""
+//             lastRet = ret
+//             val ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS)
+//             if (ret != 0 && !ignoreErrors) {
+// //              CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
+//               return ret
+//             }
+//           }
+//         }
+//       }
+//   //    CommandProcessorFactory.clean(conf.asInstanceOf[HiveConf])
+//       lastRet
+//     } finally {
+//       // Once we are done processing the line, restore the old handler
+//       if (oldSignal != null && interruptSignal != null) {
+//         Signal.handle(interruptSignal, oldSignal)
+//       }
+//     }
+//   }
 
   // Adapted splitSemiColon from Hive 2.3's CliDriver.splitSemiColon.
   // Note: [SPARK-31595] if there is a `'` in a double quoted string, or a `"` in a single quoted

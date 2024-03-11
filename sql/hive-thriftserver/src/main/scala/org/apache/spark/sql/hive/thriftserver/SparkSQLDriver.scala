@@ -21,7 +21,7 @@ import java.util.{ArrayList => JArrayList, Arrays, List => JList}
 
 import scala.collection.JavaConverters._
 
-import org.apache.commons.lang3.exception.ExceptionUtils
+//import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.hadoop.hive.metastore.api.{FieldSchema, Schema}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse
@@ -81,10 +81,10 @@ private[hive] class SparkSQLDriver(val context: SQLContext = SparkSQLEnv.sqlCont
     } catch {
         case st: SparkThrowable =>
           logDebug(s"Failed in [$command]", st)
-          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(st), st.getSqlState, st)
+          new CommandProcessorResponse(0)
         case cause: Throwable =>
           logError(s"Failed in [$command]", cause)
-          new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(cause), null, cause)
+          new CommandProcessorResponse(0)
     }
   }
 
