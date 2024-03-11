@@ -629,14 +629,14 @@ private[hive] trait HiveInspectors {
               null
             }
           }
-        case x: DateObjectInspector if x.preferWritable() =>
-          data: Any => {
-            if (data != null) {
-              new DaysWritable(x.getPrimitiveWritableObject(data)).gregorianDays
-            } else {
-              null
-            }
-          }
+        // case x: DateObjectInspector if x.preferWritable() =>
+        //   data: Any => {
+        //     if (data != null) {
+        //       new DaysWritable(x.getPrimitiveWritableObject(data)).gregorianDays
+        //     } else {
+        //       null
+        //     }
+        //   }
         case x: DateObjectInspector =>
           data: Any => {
             if (data != null) {

@@ -37,7 +37,7 @@ import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType => HiveTabl
 import org.apache.hadoop.hive.metastore.api.{Database => HiveDatabase, Table => MetaStoreApiTable, _}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition => HivePartition, Table => HiveTable}
-import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.HIVE_COLUMN_ORDER_ASC
+//import org.apache.hadoop.hive.ql.parse.BaseSemanticAnalyzer.HIVE_COLUMN_ORDER_ASC
 import org.apache.hadoop.hive.ql.processors._
 import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.hive.serde.serdeConstants
@@ -182,8 +182,8 @@ private[hive] class HiveClientImpl(
     // got changed. We reset it to clientLoader.ClassLoader here.
     state.getConf.setClassLoader(clientLoader.classLoader)
     shim.setCurrentSessionState(state)
-    state.out = new PrintStream(outputBuffer, true, UTF_8.name())
-    state.err = new PrintStream(outputBuffer, true, UTF_8.name())
+//    state.out = new PrintStream(outputBuffer, true, UTF_8.name())
+//    state.err = new PrintStream(outputBuffer, true, UTF_8.name())
     state
   }
 
@@ -312,15 +312,15 @@ private[hive] class HiveClientImpl(
   }
 
   def setOut(stream: PrintStream): Unit = withHiveState {
-    state.out = stream
+//    state.out = stream
   }
 
   def setInfo(stream: PrintStream): Unit = withHiveState {
-    state.info = stream
+//    state.info = stream
   }
 
   def setError(stream: PrintStream): Unit = withHiveState {
-    state.err = stream
+//    state.err = stream
   }
 
   private def setCurrentDatabaseRaw(db: String): Unit = {
@@ -468,7 +468,7 @@ private[hive] class HiveClientImpl(
       // are sorted in ascending order, only then propagate the sortedness information
       // to downstream processing / optimizations in Spark
       // TODO: In future we can have Spark support columns sorted in descending order
-      val allAscendingSorted = sortColumnOrders.forall(_.getOrder == HIVE_COLUMN_ORDER_ASC)
+      val allAscendingSorted = false //sortColumnOrders.forall(_.getOrder == HIVE_COLUMN_ORDER_ASC)
 
       val sortColumnNames = if (allAscendingSorted) {
         sortColumnOrders.map(_.getCol)
@@ -1144,14 +1144,14 @@ private[hive] object HiveClientImpl extends Logging {
         hiveTable.setNumBuckets(bucketSpec.numBuckets)
         hiveTable.setBucketCols(bucketSpec.bucketColumnNames.toList.asJava)
 
-        if (bucketSpec.sortColumnNames.nonEmpty) {
-          hiveTable.setSortCols(
-            bucketSpec.sortColumnNames
-              .map(col => new Order(col, HIVE_COLUMN_ORDER_ASC))
-              .toList
-              .asJava
-          )
-        }
+        // if (bucketSpec.sortColumnNames.nonEmpty) {
+        //   hiveTable.setSortCols(
+        //     bucketSpec.sortColumnNames
+        //       .map(col => new Order(col, HIVE_COLUMN_ORDER_ASC))
+        //       .toList
+        //       .asJava
+        //   )
+        // }
       case _ =>
     }
 

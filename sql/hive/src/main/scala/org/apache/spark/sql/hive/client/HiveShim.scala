@@ -30,11 +30,11 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
-import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, Index, MetaException, PrincipalType, ResourceType, ResourceUri}
+import org.apache.hadoop.hive.metastore.api.{Database, EnvironmentContext, Function => HiveFunction, FunctionType, MetaException, PrincipalType, ResourceType, ResourceUri}
 import org.apache.hadoop.hive.ql.Driver
 import org.apache.hadoop.hive.ql.io.AcidUtils
 import org.apache.hadoop.hive.ql.metadata.{Hive, HiveException, Partition, Table}
-import org.apache.hadoop.hive.ql.plan.AddPartitionDesc
+//import org.apache.hadoop.hive.ql.plan.AddPartitionDesc
 import org.apache.hadoop.hive.ql.processors.{CommandProcessor, CommandProcessorFactory}
 import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.hive.serde.serdeConstants
@@ -178,11 +178,11 @@ private[client] sealed abstract class Shim {
       isSkewedStoreAsSubdir: Boolean,
       isSrcLocal: Boolean): Unit
 
-  def renamePartition(
-      hive: Hive,
-      table: Table,
-      oldPartSpec: JMap[String, String],
-      newPart: Partition): Unit
+  // def renamePartition(
+  //     hive: Hive,
+  //     table: Table,
+  //     oldPartSpec: JMap[String, String],
+  //     newPart: Partition): Unit
 
   def loadTable(
       hive: Hive,
@@ -212,7 +212,6 @@ private[client] sealed abstract class Shim {
 
   def listFunctions(hive: Hive, db: String, pattern: String): Seq[String]
 
-  def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit
 
   def dropTable(
       hive: Hive,
@@ -243,7 +242,6 @@ private[client] sealed abstract class Shim {
 
   def getMSC(hive: Hive): IMetaStoreClient
 
-  def getIndexes(hive: Hive, dbName: String, tableName: String, max: Short): Seq[Index]
 
   protected def findMethod(klass: Class[_], name: String, args: Class[_]*): Method = {
     klass.getMethod(name, args: _*)
@@ -679,23 +677,15 @@ private[client] class Shim_v0_12 extends Shim with Logging {
     hive.getPartitionNames(dbName, tableName, partSpec, max).asScala.toSeq
   }
 
-  override def renamePartition(
-      hive: Hive,
-      table: Table,
-      oldPartSpec: JMap[String, String],
-      newPart: Partition): Unit = {
-    recordHiveCall()
-    hive.renamePartition(table, oldPartSpec, newPart)
-  }
+  // override def renamePartition(
+  //     hive: Hive,
+  //     table: Table,
+  //     oldPartSpec: JMap[String, String],
+  //     newPart: Partition): Unit = {
+  //   recordHiveCall()
+  //   hive.renamePartition(table, oldPartSpec, newPart)
+  // }
 
-  override def getIndexes(
-      hive: Hive,
-      dbName: String,
-      tableName: String,
-      max: Short): Seq[Index] = {
-    recordHiveCall()
-    hive.getIndexes(dbName, tableName, max).asScala.toSeq
-  }
 }
 
 private[client] class Shim_v0_13 extends Shim_v0_12 {
@@ -750,23 +740,23 @@ private[client] class Shim_v0_13 extends Shim_v0_12 {
   override def setDataLocation(table: Table, loc: String): Unit =
     setDataLocationMethod.invoke(table, new Path(loc))
 
-  override def createPartitions(
-      hive: Hive,
-      db: String,
-      table: String,
-      parts: Seq[CatalogTablePartition],
-      ignoreIfExists: Boolean): Unit = {
-    val addPartitionDesc = new AddPartitionDesc(db, table, ignoreIfExists)
-    parts.zipWithIndex.foreach { case (s, i) =>
-      addPartitionDesc.addPartition(
-        s.spec.asJava, s.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull)
-      if (s.parameters.nonEmpty) {
-        addPartitionDesc.getPartition(i).setPartParams(s.parameters.asJava)
-      }
-    }
-    recordHiveCall()
-    hive.createPartitions(addPartitionDesc)
-  }
+  // override def createPartitions(
+  //     hive: Hive,
+  //     db: String,
+  //     table: String,
+  //     parts: Seq[CatalogTablePartition],
+  //     ignoreIfExists: Boolean): Unit = {
+  //   val addPartitionDesc = new AddPartitionDesc(db, table, ignoreIfExists)
+  //   parts.zipWithIndex.foreach { case (s, i) =>
+  //     addPartitionDesc.addPartition(
+  //       s.spec.asJava, s.storage.locationUri.map(CatalogUtils.URIToString(_)).orNull)
+  //     if (s.parameters.nonEmpty) {
+  //       addPartitionDesc.getPartition(i).setPartParams(s.parameters.asJava)
+  //     }
+  //   }
+  //   recordHiveCall()
+  //   hive.createPartitions(addPartitionDesc)
+  // }
 
   override def getAllPartitions(hive: Hive, table: Table): Seq[Partition] = {
     recordHiveCall()

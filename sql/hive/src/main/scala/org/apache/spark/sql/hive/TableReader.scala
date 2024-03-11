@@ -133,7 +133,7 @@ class HadoopTableReader(
       val hconf = broadcastedHadoopConf.value.value
       val deserializer = deserializerClass.getConstructor().newInstance()
       DeserializerLock.synchronized {
-        deserializer.initialize(hconf, localTableDesc.getProperties)
+//        deserializer.initialize(hconf, localTableDesc.getProperties)
       }
       HadoopTableReader.fillObject(iter, deserializer, attrsWithIndex, mutableRow, deserializer)
     }
@@ -187,7 +187,7 @@ class HadoopTableReader(
             }
 
             val partPath = partition.getDataLocation
-            val partNum = Utilities.getPartitionDesc(partition).getPartSpec.size()
+            val partNum = Utilities.getPartitionDesc(partition, tableDesc).getPartSpec.size()
             val pathPatternStr = getPathPatternByPath(partNum, partPath)
             if (!pathPatternSet.contains(pathPatternStr)) {
               pathPatternSet += pathPatternStr
@@ -256,24 +256,24 @@ class HadoopTableReader(
         // be used (for details please check SPARK-26836).
         // For example, a partition may have a different SerDe as the one defined in table
         // properties.
-        val props = new Properties(tableProperties)
-        partProps.asScala.filterNot { case (k, _) =>
-          avroSchemaProperties.contains(k) && tableProperties.containsKey(k)
-        }.foreach {
-          case (key, value) => props.setProperty(key, value)
-        }
-        DeserializerLock.synchronized {
-          deserializer.initialize(hconf, props)
-        }
-        // get the table deserializer
-        val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
-        DeserializerLock.synchronized {
-          tableSerDe.initialize(hconf, tableProperties)
-        }
+        // val props = new Properties(tableProperties)
+        // partProps.asScala.filterNot { case (k, _) =>
+        //   avroSchemaProperties.contains(k) && tableProperties.containsKey(k)
+        // }.foreach {
+        //   case (key, value) => props.setProperty(key, value)
+        // }
+        // DeserializerLock.synchronized {
+        //   deserializer.initialize(hconf, props)
+        // }
+        // // get the table deserializer
+        // val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
+        // DeserializerLock.synchronized {
+        //   tableSerDe.initialize(hconf, tableProperties)
+        // }
 
-        // fill the non partition key attributes
-        HadoopTableReader.fillObject(iter, deserializer, nonPartitionKeyAttrs,
-          mutableRow, tableSerDe)
+        // // fill the non partition key attributes
+        // HadoopTableReader.fillObject(iter, deserializer, nonPartitionKeyAttrs,
+        //   mutableRow, tableSerDe)
       }
     }.toSeq
 
@@ -281,7 +281,8 @@ class HadoopTableReader(
     if (hivePartitionRDDs.size == 0) {
       new EmptyRDD[InternalRow](sparkSession.sparkContext)
     } else {
-      new UnionRDD(hivePartitionRDDs(0).context, hivePartitionRDDs)
+      new EmptyRDD[InternalRow](sparkSession.sparkContext)
+//      new UnionRDD(hivePartitionRDDs(0).context, hivePartitionRDDs)
     }
   }
 
@@ -520,12 +521,12 @@ private[hive] object HadoopTableReader extends HiveInspectors with Logging {
         case oi: HiveDecimalObjectInspector =>
           (value: Any, row: InternalRow, ordinal: Int) =>
             row.update(ordinal, HiveShim.toCatalystDecimal(oi, value))
-        case oi: TimestampObjectInspector =>
-          (value: Any, row: InternalRow, ordinal: Int) =>
-            row.setLong(ordinal, DateTimeUtils.fromJavaTimestamp(oi.getPrimitiveJavaObject(value)))
-        case oi: DateObjectInspector =>
-          (value: Any, row: InternalRow, ordinal: Int) =>
-            row.setInt(ordinal, DateTimeUtils.fromJavaDate(oi.getPrimitiveJavaObject(value)))
+        // case oi: TimestampObjectInspector =>
+        //   (value: Any, row: InternalRow, ordinal: Int) =>
+        //     row.setLong(ordinal, DateTimeUtils.fromJavaTimestamp(oi.getPrimitiveJavaObject(value)))
+        // case oi: DateObjectInspector =>
+        //   (value: Any, row: InternalRow, ordinal: Int) =>
+        //     row.setInt(ordinal, DateTimeUtils.fromJavaDate(oi.getPrimitiveJavaObject(value)))
         case oi: BinaryObjectInspector =>
           (value: Any, row: InternalRow, ordinal: Int) =>
             row.update(ordinal, oi.getPrimitiveJavaObject(value))
