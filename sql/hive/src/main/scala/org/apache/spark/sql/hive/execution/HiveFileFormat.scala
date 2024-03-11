@@ -86,7 +86,7 @@ class HiveFileFormat(fileSinkConf: FileSinkDesc)
     // Add table properties from storage handler to hadoopConf, so any custom storage
     // handler settings can be set to hadoopConf
     HiveTableUtil.configureJobPropertiesForStorageHandler(tableDesc, conf, false)
-    Utilities.copyTableJobPropertiesToConf(tableDesc, conf)
+//    Utilities.copyTableJobPropertiesToConf(tableDesc, conf)
 
     // Avoid referencing the outer object.
     val fileSinkConfSer = fileSinkConf
@@ -133,9 +133,9 @@ class HiveOutputWriter(
   private def tableDesc = fileSinkConf.getTableInfo
 
   private val serializer = {
-    val serializer = tableDesc.getDeserializerClass.getConstructor().
-      newInstance().asInstanceOf[Serializer]
-    serializer.initialize(jobConf, tableDesc.getProperties)
+    val serializer = tableDesc.getSerDe()
+      .asInstanceOf[Serializer]
+//    serializer.initialize(jobConf, tableDesc.getProperties)
     serializer
   }
 

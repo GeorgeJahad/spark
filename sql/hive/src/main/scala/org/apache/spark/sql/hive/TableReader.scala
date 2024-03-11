@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.hive
 
-import java.util.Properties
+//import java.util.Properties
 
-import scala.collection.JavaConverters._
+//import scala.collection.JavaConverters._
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, PathFilter}
@@ -37,12 +37,12 @@ import org.apache.hadoop.mapreduce.{InputFormat => newInputClass}
 
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
-import org.apache.spark.rdd.{EmptyRDD, HadoopRDD, NewHadoopRDD, RDD, UnionRDD}
+import org.apache.spark.rdd.{EmptyRDD, HadoopRDD, NewHadoopRDD, RDD}//{EmptyRDD, HadoopRDD, NewHadoopRDD, RDD, UnionRDD}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.{InternalRow, SQLConfHelper}
 import org.apache.spark.sql.catalyst.analysis.CastSupport
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
+//import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.{SerializableConfiguration, Utils}
@@ -266,7 +266,7 @@ class HadoopTableReader(
         //   deserializer.initialize(hconf, props)
         // }
         // // get the table deserializer
-           val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
+           val tableSerDe = localTableDesc.getDeserializer(hconf)
         // DeserializerLock.synchronized {
         //   tableSerDe.initialize(hconf, tableProperties)
         // }

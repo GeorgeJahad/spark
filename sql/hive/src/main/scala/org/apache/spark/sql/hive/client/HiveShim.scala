@@ -43,7 +43,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.source.HiveCatalogMetrics
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow}
 import org.apache.spark.sql.catalyst.analysis.NoSuchPermanentFunctionException
-import org.apache.spark.sql.catalyst.catalog.{CatalogFunction, CatalogTable, CatalogTablePartition, CatalogUtils, ExternalCatalogUtils, FunctionResource, FunctionResourceType}
+import org.apache.spark.sql.catalyst.catalog.{ExternalCatalogUtils,FunctionResourceType,FunctionResource,CatalogFunction,CatalogTable,CatalogTablePartition}//{CatalogFunction, CatalogTable, CatalogTablePartition, CatalogUtils, ExternalCatalogUtils, FunctionResource, FunctionResourceType}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util.{CharVarcharUtils, DateFormatter, TypeUtils}
@@ -496,10 +496,10 @@ private[client] class Shim_v0_12 extends Shim with Logging {
       numDP: JInteger, holdDDLTime, listBucketingEnabled: JBoolean)
   }
 
-  override def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit = {
-    recordHiveCall()
-    dropIndexMethod.invoke(hive, dbName, tableName, indexName, deleteDataInDropIndex)
-  }
+  // override def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit = {
+  //   recordHiveCall()
+  //   dropIndexMethod.invoke(hive, dbName, tableName, indexName, deleteDataInDropIndex)
+  // }
 
   override def dropTable(
       hive: Hive,
@@ -1348,11 +1348,11 @@ private[client] class Shim_v1_1 extends Shim_v1_0 {
       JBoolean.TYPE,
       JBoolean.TYPE)
 
-  override def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit = {
-    recordHiveCall()
-    dropIndexMethod.invoke(hive, dbName, tableName, indexName, throwExceptionInDropIndex,
-      deleteDataInDropIndex)
-  }
+  // override def dropIndex(hive: Hive, dbName: String, tableName: String, indexName: String): Unit = {
+  //   recordHiveCall()
+  //   dropIndexMethod.invoke(hive, dbName, tableName, indexName, throwExceptionInDropIndex,
+  //     deleteDataInDropIndex)
+  // }
 
 }
 

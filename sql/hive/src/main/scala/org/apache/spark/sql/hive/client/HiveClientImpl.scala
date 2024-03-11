@@ -20,7 +20,7 @@ package org.apache.spark.sql.hive.client
 import java.io.PrintStream
 import java.lang.{Iterable => JIterable}
 import java.lang.reflect.InvocationTargetException
-import java.nio.charset.StandardCharsets.UTF_8
+//import java.nio.charset.StandardCharsets.UTF_8
 import java.util.{HashMap => JHashMap, Locale, Map => JMap}
 import java.util.concurrent.TimeUnit._
 
@@ -50,7 +50,7 @@ import org.apache.spark.deploy.SparkHadoopUtil.SOURCE_SPARK
 import org.apache.spark.internal.Logging
 import org.apache.spark.metrics.source.HiveCatalogMetrics
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{DatabaseAlreadyExistsException, NoSuchDatabaseException, NoSuchPartitionException, NoSuchPartitionsException, NoSuchTableException, PartitionsAlreadyExistException}
+import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException,NoSuchPartitionsException,PartitionsAlreadyExistException,DatabaseAlreadyExistsException,NoSuchDatabaseException,NoSuchPartitionException}//{DatabaseAlreadyExistsException, NoSuchDatabaseException, NoSuchPartitionException, NoSuchPartitionsException, NoSuchTableException, PartitionsAlreadyExistException}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -58,7 +58,7 @@ import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, ParseException}
 import org.apache.spark.sql.catalyst.util.CharVarcharUtils
 import org.apache.spark.sql.connector.catalog.SupportsNamespaces._
 import org.apache.spark.sql.errors.{QueryCompilationErrors, QueryExecutionErrors}
-import org.apache.spark.sql.execution.QueryExecutionException
+//import org.apache.spark.sql.execution.QueryExecutionException
 import org.apache.spark.sql.hive.{HiveExternalCatalog, HiveUtils}
 import org.apache.spark.sql.hive.HiveExternalCatalog.DATASOURCE_SCHEMA
 import org.apache.spark.sql.internal.SQLConf
@@ -710,25 +710,25 @@ private[hive] class HiveClientImpl(
     }
   }
 
-  // override def renamePartitions(
-  //     db: String,
-  //     table: String,
-  //     specs: Seq[TablePartitionSpec],
-  //     newSpecs: Seq[TablePartitionSpec]): Unit = withHiveState {
-  //   require(specs.size == newSpecs.size, "number of old and new partition specs differ")
-  //   val rawHiveTable = getRawHiveTable(db, table)
-  //   val hiveTable = rawHiveTable.rawTable.asInstanceOf[HiveTable]
-  //   hiveTable.setOwner(userName)
-  //   specs.zip(newSpecs).foreach { case (oldSpec, newSpec) =>
-  //     if (shim.getPartition(client, hiveTable, newSpec.asJava, false) != null) {
-  //       throw new PartitionsAlreadyExistException(db, table, newSpec)
-  //     }
-  //     val hivePart = getPartitionOption(rawHiveTable, oldSpec)
-  //       .map { p => toHivePartition(p.copy(spec = newSpec), hiveTable) }
-  //       .getOrElse { throw new NoSuchPartitionException(db, table, oldSpec) }
-  //     shim.renamePartition(client, hiveTable, oldSpec.asJava, hivePart)
-  //   }
-  // }
+  override def renamePartitions(
+      db: String,
+      table: String,
+      specs: Seq[TablePartitionSpec],
+      newSpecs: Seq[TablePartitionSpec]): Unit = withHiveState {
+    require(specs.size == newSpecs.size, "number of old and new partition specs differ")
+    val rawHiveTable = getRawHiveTable(db, table)
+    val hiveTable = rawHiveTable.rawTable.asInstanceOf[HiveTable]
+    hiveTable.setOwner(userName)
+    specs.zip(newSpecs).foreach { case (oldSpec, newSpec) =>
+      if (shim.getPartition(client, hiveTable, newSpec.asJava, false) != null) {
+        throw new PartitionsAlreadyExistException(db, table, newSpec)
+      }
+      val hivePart = getPartitionOption(rawHiveTable, oldSpec)
+        .map { p => toHivePartition(p.copy(spec = newSpec), hiveTable) }
+        .getOrElse { throw new NoSuchPartitionException(db, table, oldSpec) }
+//      shim.renamePartition(client, hiveTable, oldSpec.asJava, hivePart)
+    }
+  }
 
   override def alterPartitions(
       db: String,
@@ -904,7 +904,7 @@ private[hive] class HiveClientImpl(
           // if (response.getResponseCode != 0) {
           //   throw new QueryExecutionException(response.getErrorMessage)
           // }
-          Seq(response.getResponseCode.toString)
+          Seq(response.getMessage())
       }
     } catch {
       case e: Exception =>

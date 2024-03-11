@@ -286,7 +286,7 @@ object HiveScriptIOSchema extends HiveInspectors {
     // Can not use properties.putAll(propsMap.asJava) in scala-2.12
     // See https://github.com/scala/bug/issues/10418
     propsMap.foreach { case (k, v) => properties.put(k, v) }
-    serde.initialize(null, properties)
+//    serde.initialize(null, properties)
 
     serde
   }

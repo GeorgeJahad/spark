@@ -26,7 +26,7 @@ import scala.util.control.NonFatal
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.common.FileUtils
+//import org.apache.hadoop.hive.common.FileUtils
 import org.apache.hadoop.hive.ql.exec.TaskRunner
 
 import org.apache.spark.internal.Logging
@@ -174,10 +174,10 @@ class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: P
     try {
       stagingDirForCreating.foreach { stagingDir =>
         val fs: FileSystem = stagingDir.getFileSystem(hadoopConf)
-        if (!FileUtils.mkdir(fs, stagingDir, true, hadoopConf)) {
-          throw new IllegalStateException(
-            "Cannot create staging directory  '" + stagingDir.toString + "'")
-        }
+        // if (!FileUtils.mkdir(fs, stagingDir, true, hadoopConf)) {
+        //   throw new IllegalStateException(
+        //     "Cannot create staging directory  '" + stagingDir.toString + "'")
+        // }
         fs.deleteOnExit(stagingDir)
       }
     } catch {
