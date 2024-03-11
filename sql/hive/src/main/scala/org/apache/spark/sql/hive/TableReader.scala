@@ -266,14 +266,14 @@ class HadoopTableReader(
         //   deserializer.initialize(hconf, props)
         // }
         // // get the table deserializer
-        // val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
+           val tableSerDe = localTableDesc.getDeserializerClass.getConstructor().newInstance()
         // DeserializerLock.synchronized {
         //   tableSerDe.initialize(hconf, tableProperties)
         // }
 
-        // // fill the non partition key attributes
-        // HadoopTableReader.fillObject(iter, deserializer, nonPartitionKeyAttrs,
-        //   mutableRow, tableSerDe)
+        // fill the non partition key attributes
+        HadoopTableReader.fillObject(iter, deserializer, nonPartitionKeyAttrs,
+          mutableRow, tableSerDe)
       }
     }.toSeq
 

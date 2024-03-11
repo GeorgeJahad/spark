@@ -710,25 +710,25 @@ private[hive] class HiveClientImpl(
     }
   }
 
-  override def renamePartitions(
-      db: String,
-      table: String,
-      specs: Seq[TablePartitionSpec],
-      newSpecs: Seq[TablePartitionSpec]): Unit = withHiveState {
-    require(specs.size == newSpecs.size, "number of old and new partition specs differ")
-    val rawHiveTable = getRawHiveTable(db, table)
-    val hiveTable = rawHiveTable.rawTable.asInstanceOf[HiveTable]
-    hiveTable.setOwner(userName)
-    specs.zip(newSpecs).foreach { case (oldSpec, newSpec) =>
-      if (shim.getPartition(client, hiveTable, newSpec.asJava, false) != null) {
-        throw new PartitionsAlreadyExistException(db, table, newSpec)
-      }
-      val hivePart = getPartitionOption(rawHiveTable, oldSpec)
-        .map { p => toHivePartition(p.copy(spec = newSpec), hiveTable) }
-        .getOrElse { throw new NoSuchPartitionException(db, table, oldSpec) }
-      shim.renamePartition(client, hiveTable, oldSpec.asJava, hivePart)
-    }
-  }
+  // override def renamePartitions(
+  //     db: String,
+  //     table: String,
+  //     specs: Seq[TablePartitionSpec],
+  //     newSpecs: Seq[TablePartitionSpec]): Unit = withHiveState {
+  //   require(specs.size == newSpecs.size, "number of old and new partition specs differ")
+  //   val rawHiveTable = getRawHiveTable(db, table)
+  //   val hiveTable = rawHiveTable.rawTable.asInstanceOf[HiveTable]
+  //   hiveTable.setOwner(userName)
+  //   specs.zip(newSpecs).foreach { case (oldSpec, newSpec) =>
+  //     if (shim.getPartition(client, hiveTable, newSpec.asJava, false) != null) {
+  //       throw new PartitionsAlreadyExistException(db, table, newSpec)
+  //     }
+  //     val hivePart = getPartitionOption(rawHiveTable, oldSpec)
+  //       .map { p => toHivePartition(p.copy(spec = newSpec), hiveTable) }
+  //       .getOrElse { throw new NoSuchPartitionException(db, table, oldSpec) }
+  //     shim.renamePartition(client, hiveTable, oldSpec.asJava, hivePart)
+  //   }
+  // }
 
   override def alterPartitions(
       db: String,
@@ -865,7 +865,7 @@ private[hive] class HiveClientImpl(
       // and the CommandProcessorFactory.clean function removed.
       driver.getClass.getMethod("close").invoke(driver)
       if (version != hive.v3_0 && version != hive.v3_1) {
-        CommandProcessorFactory.clean(conf)
+//        CommandProcessorFactory.clean(conf)
       }
     }
 
@@ -883,10 +883,10 @@ private[hive] class HiveClientImpl(
         case driver: Driver =>
           val response: CommandProcessorResponse = driver.run(cmd)
           // Throw an exception if there is an error in query processing.
-          if (response.getResponseCode != 0) {
-            closeDriver(driver)
-            throw new QueryExecutionException(response.getErrorMessage)
-          }
+          // if (response.getResponseCode != 0) {
+          //   closeDriver(driver)
+          //   throw new QueryExecutionException(response.getErrorMessage)
+          // }
           driver.setMaxRows(maxRows)
 
           val results = shim.getDriverResults(driver)
@@ -901,9 +901,9 @@ private[hive] class HiveClientImpl(
           }
           val response: CommandProcessorResponse = proc.run(cmd_1)
           // Throw an exception if there is an error in query processing.
-          if (response.getResponseCode != 0) {
-            throw new QueryExecutionException(response.getErrorMessage)
-          }
+          // if (response.getResponseCode != 0) {
+          //   throw new QueryExecutionException(response.getErrorMessage)
+          // }
           Seq(response.getResponseCode.toString)
       }
     } catch {
@@ -1026,18 +1026,18 @@ private[hive] class HiveClientImpl(
     others.foreach { table =>
       val t = table.getTableName
       logDebug(s"Deleting table $t")
-      try {
-        shim.getIndexes(client, "default", t, 255).foreach { index =>
-          shim.dropIndex(client, "default", t, index.getIndexName)
-        }
-        if (!table.isIndexTable) {
-          shim.dropTable(client, "default", t)
-        }
-      } catch {
-        case _: NoSuchMethodError =>
-          // HIVE-18448 Hive 3.0 remove index APIs
-          shim.dropTable(client, "default", t)
-      }
+      // try {
+      //   shim.getIndexes(client, "default", t, 255).foreach { index =>
+      //     shim.dropIndex(client, "default", t, index.getIndexName)
+      //   }
+      //   if (!table.isIndexTable) {
+      //     shim.dropTable(client, "default", t)
+      //   }
+      // } catch {
+      //   case _: NoSuchMethodError =>
+      //     // HIVE-18448 Hive 3.0 remove index APIs
+      //     shim.dropTable(client, "default", t)
+      // }
     }
     shim.getAllDatabases(client).filterNot(_ == "default").foreach { db =>
       logDebug(s"Dropping Database: $db")
