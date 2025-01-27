@@ -95,6 +95,8 @@ class ExecutorPodsAllocator(
         s"No pod was found named $name in the cluster in the " +
           s"namespace $namespace (this was supposed to be the driver pod.).")))
 
+//  logInfo(s"gbj4 $driverPod" )
+
   // Executor IDs that have been requested from Kubernetes but have not been detected in any
   // snapshot yet. Mapped to the (ResourceProfile id, timestamp) when they were created.
   protected val newlyCreatedExecutors = mutable.LinkedHashMap.empty[Long, (Int, Long)]

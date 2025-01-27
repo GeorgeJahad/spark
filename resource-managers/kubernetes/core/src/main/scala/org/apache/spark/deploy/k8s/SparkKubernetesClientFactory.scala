@@ -85,7 +85,7 @@ object SparkKubernetesClientFactory extends Logging {
 
     // Allow for specifying a context used to auto-configure from the users K8S config file
     val kubeContext = sparkConf.get(KUBERNETES_CONTEXT).filter(_.nonEmpty)
-    logInfo(log"Auto-configuring K8S client using " +
+    logInfo(log"Auto-configuring gbj K8S client using " +
       log"${MDC(K8S_CONTEXT, kubeContext.map("context " + _).getOrElse("current context"))}" +
       log" from users K8S config file")
 

@@ -680,7 +680,7 @@ private[spark] object Config extends Logging {
         "of failure or normal termination.")
       .version("3.0.0")
       .booleanConf
-      .createWithDefault(true)
+      .createWithDefault(false)
 
   val KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD =
     ConfigBuilder("spark.kubernetes.dynamicAllocation.deleteGracePeriod")

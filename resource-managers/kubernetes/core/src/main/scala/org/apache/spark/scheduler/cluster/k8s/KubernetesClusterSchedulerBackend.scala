@@ -106,6 +106,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
 
   override def start(): Unit = {
     super.start()
+    logInfo("gbj2 start")
     // Must be called before setting the executors
     podAllocator.start(applicationId(), this)
     val initExecs = Map(defaultProfile -> initialExecutors)
