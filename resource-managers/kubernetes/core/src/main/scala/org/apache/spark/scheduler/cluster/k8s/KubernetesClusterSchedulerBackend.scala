@@ -23,8 +23,6 @@ import scala.concurrent.Future
 
 
 
-import io.fabric8.kubernetes.client.KubernetesClient
-
 import org.apache.spark.SparkContext
 import org.apache.spark.deploy.k8s.{KubernetesConf}
 import org.apache.spark.deploy.k8s.Config._
@@ -45,8 +43,7 @@ import org.apache.spark.util.{Utils}
 
 private[spark] class KubernetesClusterSchedulerBackend(
     scheduler: TaskSchedulerImpl,
-    sc: SparkContext,
-    kubernetesClient: KubernetesClient)
+    sc: SparkContext)
     extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv) {
   private val appId = KubernetesConf.getKubernetesAppId()
 
@@ -72,19 +69,6 @@ private[spark] class KubernetesClusterSchedulerBackend(
     removeExecutor(executorId, reason)
   }
 
-  // private def setUpExecutorConfigMap(driverPod: Option[Pod]): Unit = {
-  //   val configMapName = KubernetesClientUtils.configMapNameExecutor
-  //   val resolvedExecutorProperties =
-  //     Map(KUBERNETES_NAMESPACE.key -> namespace)
-  //   val confFilesMap = KubernetesClientUtils
-  //     .buildSparkConfDirFilesMap(configMapName, conf, resolvedExecutorProperties) ++
-  //     resolvedExecutorProperties
-  //   val labels =
-  //     Map(SPARK_APP_ID_LABEL -> applicationId(), SPARK_ROLE_LABEL -> SPARK_POD_EXECUTOR_ROLE)
-  //   val configMap = KubernetesClientUtils.buildConfigMap(configMapName, confFilesMap, labels)
-  //   KubernetesUtils.addOwnerReference(driverPod.orNull, Seq(configMap))
-  //   kubernetesClient.configMaps().inNamespace(namespace).resource(configMap).create()
-  // }
 
   /**
    * Get an application ID associated with the job.
@@ -99,7 +83,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
 
   override def start(): Unit = {
     super.start()
-    logInfo("gbj20 start")
+    logInfo("gbj30 start")
     // Must be called before setting the executors
     val initExecs = Map(defaultProfile -> initialExecutors)
   }
@@ -111,9 +95,6 @@ private[spark] class KubernetesClusterSchedulerBackend(
       super.stop()
     }
 
-    Utils.tryLogNonFatalError {
-      kubernetesClient.close()
-    }
   }
 
   override def doRequestTotalExecutors(

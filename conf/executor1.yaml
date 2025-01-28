@@ -20,7 +20,7 @@ spec:
     - name: SPARK_USER
       value: gbj
     - name: SPARK_DRIVER_URL
-      value: spark://CoarseGrainedScheduler@spark-pi-0a638294aaef9b8c-driver-svc.default.svc:7078
+      value: "spark://CoarseGrainedScheduler@${DRIVER_POD_NAME}-svc.default.svc:7078"
     - name: SPARK_EXECUTOR_CORES
       value: "1"
     - name: SPARK_EXECUTOR_MEMORY
@@ -38,7 +38,7 @@ spec:
     - name: SPARK_JAVA_OPT_0
       value: -Djava.net.preferIPv6Addresses=false
     - name: SPARK_JAVA_OPT_20
-      value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005
+      value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
     - name: SPARK_JAVA_OPT_6
       value: --add-opens=java.base/java.io=ALL-UNNAMED
     - name: SPARK_JAVA_OPT_1

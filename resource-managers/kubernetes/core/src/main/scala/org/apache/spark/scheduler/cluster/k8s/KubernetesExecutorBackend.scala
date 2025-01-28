@@ -97,13 +97,8 @@ private[spark] object KubernetesExecutorBackend extends Logging {
 
       val cfg = driver.askSync[SparkAppConfig](RetrieveSparkAppConfig(arguments.resourceProfileId))
       val props = cfg.sparkProperties ++ Seq[(String, String)](("spark.app.id", arguments.appId))
-      val execId: String = arguments.executorId match {
-        case null | "EXECID" | "" =>
-          // We need to resolve the exec id dynamically
-          driver.askSync[String](GenerateExecID(arguments.podName))
-        case id =>
-          id
-      }
+      val execId = arguments.executorId
+
       fetcher.shutdown()
 
       // Create SparkEnv using properties we fetched from the driver.

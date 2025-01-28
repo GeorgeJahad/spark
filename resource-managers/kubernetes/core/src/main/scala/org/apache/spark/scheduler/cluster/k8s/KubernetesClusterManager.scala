@@ -22,7 +22,7 @@ import io.fabric8.kubernetes.client.Config
 
 
 import org.apache.spark.{SparkConf, SparkContext, SparkMasterRegex}
-import org.apache.spark.deploy.k8s.{KubernetesConf, KubernetesUtils, SparkKubernetesClientFactory}
+import org.apache.spark.deploy.k8s.{KubernetesConf}
 import org.apache.spark.deploy.k8s.Config._
 
 import org.apache.spark.internal.{Logging, MDC}
@@ -72,6 +72,8 @@ private[spark] class KubernetesClusterManager extends ExternalClusterManager wit
       return backend
     }
     val wasSparkSubmittedInClusterMode = sc.conf.get(KUBERNETES_DRIVER_SUBMIT_CHECK)
+    def parseMasterUrl(url: String): String = url.substring("k8s://".length)
+
     val (authConfPrefix,
       apiServerUri,
       defaultServiceAccountCaCrt) = if (wasSparkSubmittedInClusterMode) {
@@ -85,7 +87,7 @@ private[spark] class KubernetesClusterManager extends ExternalClusterManager wit
         serviceAccountCaCrt)
     } else {
       (KUBERNETES_AUTH_CLIENT_MODE_PREFIX,
-        KubernetesUtils.parseMasterUrl(masterURL),
+        parseMasterUrl(masterURL),
         None)
     }
 
@@ -100,25 +102,9 @@ private[spark] class KubernetesClusterManager extends ExternalClusterManager wit
         KubernetesConf.getResourceNamePrefix(sc.conf.get("spark.app.name")))
     }
 
-    val kubernetesClient = SparkKubernetesClientFactory.createKubernetesClient(
-      apiServerUri,
-      Some(sc.conf.get(KUBERNETES_NAMESPACE)),
-      authConfPrefix,
-      SparkKubernetesClientFactory.ClientType.Driver,
-      sc.conf,
-      defaultServiceAccountCaCrt)
-
-    if (sc.conf.get(KUBERNETES_EXECUTOR_PODTEMPLATE_FILE).isDefined) {
-      KubernetesUtils.loadPodFromTemplate(
-        kubernetesClient,
-        sc.conf.get(KUBERNETES_EXECUTOR_PODTEMPLATE_FILE).get,
-        sc.conf.get(KUBERNETES_EXECUTOR_PODTEMPLATE_CONTAINER_NAME),
-        sc.conf)
-    }
     new KubernetesClusterSchedulerBackend(
       scheduler.asInstanceOf[TaskSchedulerImpl],
-      sc,
-      kubernetesClient)
+      sc)
   }
 
 
