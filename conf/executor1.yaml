@@ -20,7 +20,7 @@ spec:
     - name: SPARK_USER
       value: gbj
     - name: SPARK_DRIVER_URL
-      value: "spark://CoarseGrainedScheduler@${DRIVER_POD_NAME}-svc.default.svc:7078"
+      value: "spark://CoarseGrainedScheduler@spark-pi-09ce2f94a9d2b56c-driver-svc.default.svc:7078"
     - name: SPARK_EXECUTOR_CORES
       value: "1"
     - name: SPARK_EXECUTOR_MEMORY
@@ -93,7 +93,7 @@ spec:
           fieldPath: metadata.name
     - name: SPARK_LOCAL_DIRS
       value: /var/data/spark-f9a93e45-6e93-405c-9ca1-0e689deb7b89
-    image: spark:noK2
+    image: spark:noK4
     imagePullPolicy: IfNotPresent
     name: spark-kubernetes-executor
     ports:
