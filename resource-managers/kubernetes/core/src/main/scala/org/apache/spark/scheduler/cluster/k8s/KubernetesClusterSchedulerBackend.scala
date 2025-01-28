@@ -99,7 +99,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
 
   override def start(): Unit = {
     super.start()
-    logInfo("gbj2 start")
+    logInfo("gbj20 start")
     // Must be called before setting the executors
     val initExecs = Map(defaultProfile -> initialExecutors)
   }
@@ -182,7 +182,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
   }
 
   override protected def isExecutorExcluded(executorId: String, hostname: String): Boolean = {
-    true
+    false
   }
 
   private class KubernetesDriverEndpoint extends DriverEndpoint {

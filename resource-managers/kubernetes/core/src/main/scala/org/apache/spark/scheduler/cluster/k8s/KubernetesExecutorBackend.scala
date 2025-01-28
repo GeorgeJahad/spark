@@ -64,6 +64,7 @@ private[spark] object KubernetesExecutorBackend extends Logging {
 
     Utils.resetStructuredLogging()
     Utils.initDaemon(log)
+    log.info("gbj20 from executor")
 
     SparkHadoopUtil.get.runAsSparkUser { () =>
       // Debug code

@@ -41,7 +41,7 @@ private[k8s] trait LoggingPodStatusWatcher extends Watcher[Pod] {
 private[k8s] class LoggingPodStatusWatcherImpl(conf: KubernetesDriverConf)
   extends LoggingPodStatusWatcher with Logging {
 
-  val gbj10 = "gbj10"
+  val gbj20 = "gbj20"
   private val appId = conf.appId
 
   private var podCompleted = false
@@ -101,7 +101,7 @@ private[k8s] class LoggingPodStatusWatcherImpl(conf: KubernetesDriverConf)
 
   override def watchOrStop(sId: String): Boolean = {
     logInfo(log"Waiting for application ${MDC(APP_NAME, conf.appName)}} with application ID " +
-      log"${MDC(APP_ID, appId)} and gbj10 submission ID ${MDC(SUBMISSION_ID, sId)} to finish...")
+      log"${MDC(APP_ID, appId)} and gbj20 submission ID ${MDC(SUBMISSION_ID, sId)} to finish...")
     val interval = conf.get(REPORT_INTERVAL)
     synchronized {
       while (!podCompleted && !resourceTooOldReceived) {
@@ -115,7 +115,7 @@ private[k8s] class LoggingPodStatusWatcherImpl(conf: KubernetesDriverConf)
         pod.map { p => log"Container final statuses:\n\n${MDC(STATUS, containersDescription(p))}" }
           .getOrElse(log"No containers were found in the driver pod."))
       logInfo(log"Application ${MDC(APP_NAME, conf.appName)} with application ID " +
-        log"${MDC(APP_ID, appId)} and gbj10 submission ID ${MDC(SUBMISSION_ID, sId)} finished")
+        log"${MDC(APP_ID, appId)} and gbj20 submission ID ${MDC(SUBMISSION_ID, sId)} finished")
     }
     podCompleted
   }

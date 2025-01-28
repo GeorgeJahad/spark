@@ -1,0 +1,168 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    spark-app-name: spark-pi
+    spark-app-selector: spark-0b0907d65ec240618163930cc6671aaa
+    spark-exec-id: "1"
+    spark-exec-resourceprofile-id: "0"
+    spark-role: executor
+    spark-version: 4.0.0-SNAPSHOT
+  name: spark-pi-e9faee94a9cd4cc2-exec-1
+  namespace: default
+  resourceVersion: "3725"
+  uid: 26aac977-c552-48be-90e0-5fcfe6334195
+spec:
+  containers:
+  - args:
+    - executor
+    env:
+    - name: SPARK_USER
+      value: gbj
+    - name: SPARK_DRIVER_URL
+      value: spark://CoarseGrainedScheduler@spark-pi-0a638294aaef9b8c-driver-svc.default.svc:7078
+    - name: SPARK_EXECUTOR_CORES
+      value: "1"
+    - name: SPARK_EXECUTOR_MEMORY
+      value: 1024m
+    - name: SPARK_APPLICATION_ID
+      value: spark-0b0907d65ec240618163930cc6671aaa
+    - name: SPARK_CONF_DIR
+      value: /opt/spark/conf
+    - name: SPARK_EXECUTOR_ID
+      value: "1"
+    - name: SPARK_RESOURCE_PROFILE_ID
+      value: "0"
+    - name: SPARK_DRIVER_POD_IP
+      value: 10.244.0.9
+    - name: SPARK_JAVA_OPT_0
+      value: -Djava.net.preferIPv6Addresses=false
+    - name: SPARK_JAVA_OPT_20
+      value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005
+    - name: SPARK_JAVA_OPT_6
+      value: --add-opens=java.base/java.io=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_1
+      value: -XX:+IgnoreUnrecognizedVMOptions
+    - name: SPARK_JAVA_OPT_21
+      value: -Dspark.driver.port=7078
+    - name: SPARK_JAVA_OPT_10
+      value: --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_9
+      value: --add-opens=java.base/java.util=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_8
+      value: --add-opens=java.base/java.nio=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_12
+      value: --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_15
+      value: --add-opens=java.base/sun.security.action=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_3
+      value: --add-opens=java.base/java.lang=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_19
+      value: -Dio.netty.tryReflectionSetAccessible=true
+    - name: SPARK_JAVA_OPT_13
+      value: --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_4
+      value: --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_18
+      value: -Djdk.reflect.useDirectMethodHandle=false
+    - name: SPARK_JAVA_OPT_7
+      value: --add-opens=java.base/java.net=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_17
+      value: --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_22
+      value: -Dspark.driver.blockManager.port=7079
+    - name: SPARK_JAVA_OPT_11
+      value: --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_2
+      value: --add-modules=jdk.incubator.vector
+    - name: SPARK_JAVA_OPT_16
+      value: --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_14
+      value: --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+    - name: SPARK_JAVA_OPT_5
+      value: --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+    - name: SPARK_EXECUTOR_POD_IP
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.podIP
+    - name: SPARK_EXECUTOR_POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SPARK_LOCAL_DIRS
+      value: /var/data/spark-f9a93e45-6e93-405c-9ca1-0e689deb7b89
+    image: spark:noK2
+    imagePullPolicy: IfNotPresent
+    name: spark-kubernetes-executor
+    ports:
+    - containerPort: 7079
+      name: blockmanager
+      protocol: TCP
+    resources:
+      limits:
+        memory: 1408Mi
+      requests:
+        cpu: "1"
+        memory: 1408Mi
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /opt/spark/conf
+      name: spark-conf-volume-exec
+    - mountPath: /var/data/spark-f9a93e45-6e93-405c-9ca1-0e689deb7b89
+      name: spark-local-dir-1
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-krgwc
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  hostname: spark-pi-e9faee94a9cd4cc2-exec-1
+  nodeName: kind-control-plane
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: spark
+  serviceAccountName: spark
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - configMap:
+      defaultMode: 420
+      items:
+      - key: log4j2.properties.pattern-layout-template
+        mode: 420
+        path: log4j2.properties.pattern-layout-template
+      name: spark-exec-18315494a9ce9f52-conf-map
+    name: spark-conf-volume-exec
+  - emptyDir: {}
+    name: spark-local-dir-1
+  - name: kube-api-access-krgwc
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
