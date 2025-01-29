@@ -20,7 +20,7 @@ spec:
     - name: SPARK_USER
       value: gbj
     - name: SPARK_DRIVER_URL
-      value: "spark://CoarseGrainedScheduler@10.244.0.76:7078"
+      value: "spark://CoarseGrainedScheduler@spark-pi-09ce2f94a9d2b56c-driver-svc.default.svc:7078"
     - name: SPARK_EXECUTOR_CORES
       value: "1"
     - name: SPARK_EXECUTOR_MEMORY
@@ -38,7 +38,7 @@ spec:
     - name: SPARK_JAVA_OPT_0
       value: -Djava.net.preferIPv6Addresses=false
     - name: SPARK_JAVA_OPT_20
-      value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005
+      value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
     - name: SPARK_JAVA_OPT_6
       value: --add-opens=java.base/java.io=ALL-UNNAMED
     - name: SPARK_JAVA_OPT_1
@@ -93,7 +93,7 @@ spec:
           fieldPath: metadata.name
     - name: SPARK_LOCAL_DIRS
       value: /var/data/spark-f9a93e45-6e93-405c-9ca1-0e689deb7b89
-    image: spark:noK4
+    image: spark:noK6
     imagePullPolicy: IfNotPresent
     name: spark-kubernetes-executor
     ports:
@@ -109,8 +109,6 @@ spec:
     terminationMessagePath: /dev/termination-log
     terminationMessagePolicy: File
     volumeMounts:
-    - mountPath: /opt/spark/conf
-      name: spark-conf-volume-exec
     - mountPath: /var/data/spark-f9a93e45-6e93-405c-9ca1-0e689deb7b89
       name: spark-local-dir-1
     - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
@@ -138,14 +136,6 @@ spec:
     operator: Exists
     tolerationSeconds: 300
   volumes:
-  - configMap:
-      defaultMode: 420
-      items:
-      - key: log4j2.properties.pattern-layout-template
-        mode: 420
-        path: log4j2.properties.pattern-layout-template
-      name: spark-exec-18315494a9ce9f52-conf-map
-    name: spark-conf-volume-exec
   - emptyDir: {}
     name: spark-local-dir-1
   - name: kube-api-access-krgwc
@@ -155,11 +145,6 @@ spec:
       - serviceAccountToken:
           expirationSeconds: 3607
           path: token
-      - configMap:
-          items:
-          - key: ca.crt
-            path: ca.crt
-          name: kube-root-ca.crt
       - downwardAPI:
           items:
           - fieldRef:

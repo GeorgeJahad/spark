@@ -36,7 +36,7 @@ spec:
           fieldPath: status.podIP
     - name: SPARK_CONF_DIR
       value: /opt/spark/conf
-    image: spark:noK4
+    image: spark:noK6
     imagePullPolicy: IfNotPresent
     name: spark-kubernetes-driver
     ports:
