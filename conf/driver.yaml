@@ -19,6 +19,8 @@ spec:
     - --conf
     - "spark.driver.port=7078"
     - --conf
+    - "spark.driver.host=spark-pi-09ce2f94a9d2b56c-driver-svc.default.svc"
+    - --conf
     - "spark.master=k8s://https://127.0.0.1:38819"
     - --class
     - org.apache.spark.examples.SparkPi
