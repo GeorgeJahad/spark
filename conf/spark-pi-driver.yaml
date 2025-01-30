@@ -2,7 +2,11 @@
   jobSetId: job-set-1                                                
   jobs:                                                              
     - namespace: default                                             
-      priority: 0                                                    
+      services:
+        - ports:
+           - 7078
+          type: Headless
+          name: sparkDriver
       podSpec:                                                       
         terminationGracePeriodSeconds: 0                             
         restartPolicy: Never                                         
@@ -14,9 +18,9 @@
             - --conf
             - "spark.driver.port=7078"
             - --conf
-            - "spark.driver.host=spark-pi-09ce2f94a9d2b56c-driver-svc.default.svc"
+            - spark.driver.host=armada-01jjtstnndd0kmhry65x528h5z-0-service-0
             - --conf
-            - "spark.master=armada://https://127.0.0.1:38819"
+            - spark.master=k8s://service-0:38819"
             - --class
             - org.apache.spark.examples.SparkPi
             - local:///opt/spark/examples/jars/spark-examples.jar
@@ -58,14 +62,10 @@
         dnsPolicy: ClusterFirst
         enableServiceLinks: true
         hostname: spark-pi-09ce2f94a9d2b56c-driver
-        nodeName: kind-control-plane
-        preemptionPolicy: PreemptLowerPriority
-        priority: 0
+        nodeName: armada-worker
         restartPolicy: Never
         schedulerName: default-scheduler
         securityContext: {}
-        serviceAccount: spark
-        serviceAccountName: spark
         terminationGracePeriodSeconds: 30
         tolerations:
         - effect: NoExecute
