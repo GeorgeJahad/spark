@@ -1,12 +1,16 @@
   queue: test                                                        
   jobSetId: job-set-1                                                
   jobs:                                                              
-    - namespace: default                                             
-      services:
-        - ports:
-           - 7078
-          type: Headless
-          name: sparkDriver
+    - namespace: default
+      k8sService:
+        metadata:
+          name: driverService
+        spec:
+          type: "ClusterIP"
+          clusterIP: None
+          ports:
+            - port: 7078
+            - port: 7079
       podSpec:                                                       
         terminationGracePeriodSeconds: 0                             
         restartPolicy: Never                                         
@@ -18,19 +22,22 @@
             - --conf
             - "spark.driver.port=7078"
             - --conf
-            - spark.driver.host=armada-01jjtstnndd0kmhry65x528h5z-0-service-0
-            - --conf
             - spark.master=k8s://service-0:38819"
             - --class
             - org.apache.spark.examples.SparkPi
             - local:///opt/spark/examples/jars/spark-examples.jar
             - "100"
-            image: spark:testing                                     
+            image: spark:testing3
             env:
             - name: SPARK_USER
               value: gbj
             - name: SPARK_APPLICATION_ID
               value: spark-245bb63032344654a54269df9f70f527
+            - name: IP_ADDR
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
             - name: SPARK_DRIVER_BIND_ADDRESS
               valueFrom:
                 fieldRef:
@@ -62,6 +69,7 @@
         dnsPolicy: ClusterFirst
         enableServiceLinks: true
         hostname: spark-pi-09ce2f94a9d2b56c-driver
+        name: spark-pi-09ce2f94a9d2b56c-driver
         nodeName: armada-worker
         restartPolicy: Never
         schedulerName: default-scheduler

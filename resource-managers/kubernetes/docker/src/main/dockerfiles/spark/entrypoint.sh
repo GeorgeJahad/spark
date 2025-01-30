@@ -78,6 +78,33 @@ fi
 # SPARK-43540: add current working directory into executor classpath
 SPARK_CLASSPATH="$SPARK_CLASSPATH:$PWD"
 
+replace_regex() {
+    local input_string="$1"
+    local regex="=ARMADA_IP_ADDR"
+    local replacement="=$IP_ADDR"
+
+    # Use sed to perform the replacement
+    echo "$input_string" | sed -E "s/${regex}/${replacement}/g"
+}
+
+process_element() {
+    echo $(replace_regex "$1")
+}
+
+# Function to process all arguments and return results in an array
+process_all() {
+    local input_array=("$@")  # Convert $@ into an array
+    local output_array=()      # Create an empty array for results
+
+    for element in "${input_array[@]}"; do
+        result=$(process_element "$element")  # Call processing function
+        output_array+=("$result")            # Store result in array
+    done
+
+    echo "${output_array[@]}"  # Return as space-separated string
+}
+
+
 case "$1" in
   driver)
     shift 1
@@ -85,6 +112,7 @@ case "$1" in
       "$SPARK_HOME/bin/spark-submit"
       --conf "spark.driver.bindAddress=$SPARK_DRIVER_BIND_ADDRESS"
       --conf "spark.executorEnv.SPARK_DRIVER_POD_IP=$SPARK_DRIVER_BIND_ADDRESS"
+      --conf "spark.driver.host=$SPARK_DRIVER_BIND_ADDRESS"
       --deploy-mode client
       "$@"
     )

@@ -1,0 +1,96 @@
+  queue: test                                                        
+  jobSetId: job-set-1                                                
+  jobs:                                                              
+    - namespace: default                                             
+      podSpec:                                                       
+        terminationGracePeriodSeconds: 0                             
+        restartPolicy: Never                                         
+        containers:                                                  
+          - args:
+            - executor
+            env:
+            - name: SPARK_USER
+              value: gbj
+            - name: SPARK_DRIVER_URL
+              value: "spark://CoarseGrainedScheduler@10.244.1.51:7078"
+            - name: SPARK_EXECUTOR_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: SPARK_EXECUTOR_POD_NAME
+              value: "executor_pod"
+            - name: SPARK_EXECUTOR_CORES
+              value: "1"
+            - name: SPARK_EXECUTOR_MEMORY
+              value: 1024m
+            - name: SPARK_APPLICATION_ID
+              value: spark-0b0907d65ec240618163930cc6671aaa
+            - name: SPARK_CONF_DIR
+              value: /opt/spark/conf
+            - name: SPARK_EXECUTOR_ID
+              value: "1"
+            - name: SPARK_RESOURCE_PROFILE_ID
+              value: "0"
+            - name: SPARK_JAVA_OPT_0
+              value: -Djava.net.preferIPv6Addresses=false
+            - name: SPARK_JAVA_OPT_20
+              value: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+            - name: SPARK_JAVA_OPT_6
+              value: --add-opens=java.base/java.io=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_1
+              value: -XX:+IgnoreUnrecognizedVMOptions
+            - name: SPARK_JAVA_OPT_21
+              value: -Dspark.driver.port=7078
+            - name: SPARK_JAVA_OPT_10
+              value: --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_9
+              value: --add-opens=java.base/java.util=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_8
+              value: --add-opens=java.base/java.nio=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_12
+              value: --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_15
+              value: --add-opens=java.base/sun.security.action=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_3
+              value: --add-opens=java.base/java.lang=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_19
+              value: -Dio.netty.tryReflectionSetAccessible=true
+            - name: SPARK_JAVA_OPT_13
+              value: --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_4
+              value: --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_18
+              value: -Djdk.reflect.useDirectMethodHandle=false
+            - name: SPARK_JAVA_OPT_7
+              value: --add-opens=java.base/java.net=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_17
+              value: --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_22
+              value: -Dspark.driver.blockManager.port=7079
+            - name: SPARK_JAVA_OPT_11
+              value: --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_2
+              value: --add-modules=jdk.incubator.vector
+            - name: SPARK_JAVA_OPT_16
+              value: --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_14
+              value: --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+            - name: SPARK_JAVA_OPT_5
+              value: --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+            image: spark:testing
+            imagePullPolicy: IfNotPresent
+            name: spark-kubernetes-executor
+            ports:
+            - containerPort: 7079
+              name: blockmanager
+              protocol: TCP
+            resources:
+              limits:
+                cpu: "1"
+                memory: 1408Mi
+              requests:
+                cpu: "1"
+                memory: 1408Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
