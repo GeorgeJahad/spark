@@ -1,0 +1,93 @@
+  queue: test                                                        
+  jobSetId: job-set-1                                                
+  jobs:                                                              
+    - namespace: default                                             
+      priority: 0                                                    
+      podSpec:                                                       
+        terminationGracePeriodSeconds: 0                             
+        restartPolicy: Never                                         
+        containers:                                                  
+          - args:
+            - driver
+            - --conf
+            - "spark.driver.extraJavaOptions=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005"
+            - --conf
+            - "spark.driver.port=7078"
+            - --conf
+            - "spark.driver.host=spark-pi-09ce2f94a9d2b56c-driver-svc.default.svc"
+            - --conf
+            - "spark.master=armada://https://127.0.0.1:38819"
+            - --class
+            - org.apache.spark.examples.SparkPi
+            - local:///opt/spark/examples/jars/spark-examples.jar
+            - "100"
+            image: spark:testing                                     
+            env:
+            - name: SPARK_USER
+              value: gbj
+            - name: SPARK_APPLICATION_ID
+              value: spark-245bb63032344654a54269df9f70f527
+            - name: SPARK_DRIVER_BIND_ADDRESS
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: SPARK_CONF_DIR
+              value: /opt/spark/conf
+            imagePullPolicy: IfNotPresent
+            name: spark-kubernetes-driver
+            ports:
+            - containerPort: 7078
+              name: driver-rpc-port
+              protocol: TCP
+            - containerPort: 7079
+              name: blockmanager
+              protocol: TCP
+            - containerPort: 4040
+              name: spark-ui
+              protocol: TCP
+            resources:
+              limits:
+                cpu: "1"
+                memory: 1408Mi
+              requests:
+                cpu: "1"
+                memory: 1408Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        enableServiceLinks: true
+        hostname: spark-pi-09ce2f94a9d2b56c-driver
+        nodeName: kind-control-plane
+        preemptionPolicy: PreemptLowerPriority
+        priority: 0
+        restartPolicy: Never
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: spark
+        serviceAccountName: spark
+        terminationGracePeriodSeconds: 30
+        tolerations:
+        - effect: NoExecute
+          key: node.kubernetes.io/not-ready
+          operator: Exists
+          tolerationSeconds: 300
+        - effect: NoExecute
+          key: node.kubernetes.io/unreachable
+          operator: Exists
+          tolerationSeconds: 300
+        volumes:
+        - name: kube-api-access-k9xlp
+          projected:
+            defaultMode: 420
+            sources:
+            - serviceAccountToken:
+                expirationSeconds: 3607
+                path: token
+            - downwardAPI:
+                items:
+                - fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.namespace
+                  path: namespace
+        
