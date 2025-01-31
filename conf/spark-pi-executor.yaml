@@ -12,7 +12,7 @@
             - name: SPARK_USER
               value: gbj
             - name: SPARK_DRIVER_URL
-              value: "spark://CoarseGrainedScheduler@10.244.1.51:7078"
+              value: "spark://CoarseGrainedScheduler@10.244.1.33:7078"
             - name: SPARK_EXECUTOR_POD_IP
               valueFrom:
                 fieldRef:

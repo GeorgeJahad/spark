@@ -15,4 +15,4 @@
 # limitations under the License.
 #
 
-org.apache.spark.scheduler.cluster.k8s.KubernetesClusterManager
+org.apache.spark.scheduler.cluster.armada.ArmadaClusterManager

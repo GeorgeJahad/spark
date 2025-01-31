@@ -22,12 +22,12 @@
             - --conf
             - "spark.driver.port=7078"
             - --conf
-            - spark.master=k8s://service-0:38819"
+            - spark.master=armada://service-0:38819"
             - --class
             - org.apache.spark.examples.SparkPi
             - local:///opt/spark/examples/jars/spark-examples.jar
             - "100"
-            image: spark:testing3
+            image: spark:testing8
             env:
             - name: SPARK_USER
               value: gbj
