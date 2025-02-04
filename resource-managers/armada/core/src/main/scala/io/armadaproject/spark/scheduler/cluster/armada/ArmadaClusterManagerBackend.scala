@@ -27,6 +27,7 @@ import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, Schedu
 
 import io.grpc.ManagedChannelBuilder
 import k8s.io.api.core.v1.generated.{Container, PodSpec, ResourceRequirements}
+import k8s.io.api.core.v1.generated.{EnvVar, EnvVarSource, ObjectFieldSelector}
 import k8s.io.apimachinery.pkg.api.resource.generated.Quantity
 import api.submit.SubmitGrpc
 
@@ -58,10 +59,21 @@ private[spark] class ArmadaClusterSchedulerBackend(
     val urlArray = masterURL.split(":")
     val host = urlArray(1)
     val port = urlArray(2).toInt
+
+
+    val driverURL = s"spark://CoarseGrainedScheduler@${host}:7078"
+    val source = new EnvVarSource().withFieldRef(new ObjectFieldSelector().withApiVersion("v1").withFieldPath("status.podIP"))
+    val envVars = Seq(
+      new EnvVar().withName("SPARK_EXECUTOR_ID").withValue("1"),
+      new EnvVar().withName("SPARK_DRIVER_URL").withValue(driverURL),
+      new EnvVar().withName("SPARK_EXECUTOR_POD_IP").withValueFrom(source),
+      new EnvVar().withName("SPARK_EXECUTOR_ID").withValue("1"),
+    )
     val executorContainer = Container()
       .withName("spark-executor")
       .withImagePullPolicy("IfNotPresent")
       .withImage("testing")
+      .withEnv(envVars)
       .withCommand(Seq("/opt/entrypoint.sh"))
       .withArgs(
         Seq(
@@ -134,7 +146,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
-      logInfo("gbj3 driver endpoint")
+      logInfo("gbj5 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 
