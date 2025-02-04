@@ -56,6 +56,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
 
 
   def submitJob(): Unit = {
+
     val urlArray = masterURL.split(":")
     val host = urlArray(1)
     val port = urlArray(2).toInt
@@ -72,7 +73,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     val executorContainer = Container()
       .withName("spark-executor")
       .withImagePullPolicy("IfNotPresent")
-      .withImage("testing")
+      .withImage("spark:testing")
       .withEnv(envVars)
       .withCommand(Seq("/opt/entrypoint.sh"))
       .withArgs(
@@ -122,8 +123,64 @@ private[spark] class ArmadaClusterSchedulerBackend(
 
     }
   }
+/*
+  def submitJob2(): Unit = {
+    val sleepContainer = Container()
+      .withName("ls")
+      .withImagePullPolicy("IfNotPresent")
+      .withImage("alpine:3.10")
+      .withCommand(Seq("ls"))
+      .withArgs(
+        Seq(
+          "-c",
+          "ls -l; sleep 30; date; echo '========'; ls -l; sleep 10; date"
+        )
+      )
+      .withResources(
+        ResourceRequirements(
+          limits = Map(
+            "memory" -> Quantity(Option("10Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          ),
+          requests = Map(
+            "memory" -> Quantity(Option("10Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          )
+        )
+      )
 
+    val podSpec = PodSpec()
+      .withTerminationGracePeriodSeconds(0)
+      .withRestartPolicy("Never")
+      .withContainers(Seq(sleepContainer))
+
+    val testJob = api.submit
+      .JobSubmitRequestItem()
+      .withPriority(0)
+      .withNamespace("personal-anonymous")
+      .withPodSpec(podSpec)
+
+    val testJobRequest = api.submit.JobSubmitRequest(
+      queue = "e2e-test-queue",
+      jobSetId = "spark-test-1",
+      jobRequestItems = Seq(testJob)
+    )
+
+    val channel =
+      ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
+    val blockingStub = SubmitGrpc.blockingStub(channel)
+
+    val jobSubmitResponse = blockingStub.submitJobs(testJobRequest)
+
+    println(s"Job Submit Response")
+    for (respItem <- jobSubmitResponse.jobResponseItems) {
+      println(s"JobID: ${respItem.jobId}  Error: ${respIteme.rror} ")
+    }
+  }
+ */
     override def start(): Unit = {
+      //val j =  io.armadaproject.armada.Job
+      //j.submitJob()
       submitJob()
     }
 
@@ -146,7 +203,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
-      logInfo("gbj5 driver endpoint")
+      logInfo("gbj8 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 
