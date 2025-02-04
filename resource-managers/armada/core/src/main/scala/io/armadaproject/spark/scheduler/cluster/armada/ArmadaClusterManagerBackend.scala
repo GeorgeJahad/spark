@@ -25,6 +25,13 @@ import org.apache.spark.rpc.{RpcAddress, RpcCallContext}
 import org.apache.spark.scheduler.{ExecutorDecommission, TaskSchedulerImpl}
 import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, SchedulerBackendUtils}
 
+import io.grpc.ManagedChannelBuilder
+import k8s.io.api.core.v1.generated.{Container, PodSpec, ResourceRequirements}
+import k8s.io.apimachinery.pkg.api.resource.generated.Quantity
+import api.submit.SubmitGrpc
+
+
+
 // FIXME: Actually import ArmadaClient
 class ArmadaClient {}
 
@@ -33,7 +40,8 @@ private[spark] class ArmadaClusterSchedulerBackend(
     scheduler: TaskSchedulerImpl,
     sc: SparkContext,
     armadaClient: ArmadaClient,
-    executorService: ScheduledExecutorService)
+    executorService: ScheduledExecutorService,
+    masterURL: String)
     extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv) {
 
     // FIXME
@@ -45,7 +53,68 @@ private[spark] class ArmadaClusterSchedulerBackend(
         conf.getOption("spark.app.id").getOrElse(appId)
     }
 
-    override def start(): Unit = {}
+
+  def submitJob(): Unit = {
+    val urlArray = masterURL.split(":")
+    val host = urlArray(1)
+    val port = urlArray(2).toInt
+    val executorContainer = Container()
+      .withName("spark-executor")
+      .withImagePullPolicy("IfNotPresent")
+      .withImage("testing")
+      .withCommand(Seq("/opt/entrypoint.sh"))
+      .withArgs(
+        Seq(
+          "executor",
+        )
+      )
+      .withResources(
+        ResourceRequirements(
+          limits = Map(
+            "memory" -> Quantity(Option("1000Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          ),
+          requests = Map(
+            "memory" -> Quantity(Option("1000Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          )
+        )
+      )
+
+    val podSpec = PodSpec()
+      .withTerminationGracePeriodSeconds(0)
+      .withRestartPolicy("Never")
+      .withContainers(Seq(executorContainer))
+
+    val testJob = api.submit
+      .JobSubmitRequestItem()
+      .withPriority(0)
+      .withNamespace("default")
+      .withPodSpec(podSpec)
+
+    val testJobRequest = api.submit.JobSubmitRequest(
+      queue = "test",
+      jobSetId = "executor",
+      jobRequestItems = Seq(testJob)
+    )
+
+    val channel =
+      ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
+    val blockingStub = SubmitGrpc.blockingStub(channel)
+
+    val jobSubmitResponse = blockingStub.submitJobs(testJobRequest)
+
+    println(s"Job Submit Response")
+    for (respItem <- jobSubmitResponse.jobResponseItems) {
+      println(s"JobID: ${respItem.jobId}  Error: ${respItem.error} ")
+
+    }
+  }
+
+    override def start(): Unit = {
+      submitJob()
+    }
+
     override def stop(): Unit = {}
 
     /*
@@ -65,6 +134,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
+      logInfo("gbj3 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 
