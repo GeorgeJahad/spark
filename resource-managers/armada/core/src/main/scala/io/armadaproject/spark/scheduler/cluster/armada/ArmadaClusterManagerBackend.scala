@@ -61,14 +61,20 @@ private[spark] class ArmadaClusterSchedulerBackend(
     val host = urlArray(1)
     val port = urlArray(2).toInt
 
+    val driverAddr = sys.env("SPARK_DRIVER_BIND_ADDRESS")
 
-    val driverURL = s"spark://CoarseGrainedScheduler@${host}:7078"
+
+    val driverURL = s"spark://CoarseGrainedScheduler@${driverAddr}:7078"
     val source = new EnvVarSource().withFieldRef(new ObjectFieldSelector().withApiVersion("v1").withFieldPath("status.podIP"))
     val envVars = Seq(
       new EnvVar().withName("SPARK_EXECUTOR_ID").withValue("1"),
+      new EnvVar().withName("SPARK_RESOURCE_PROFILE_ID").withValue("0"),
+      new EnvVar().withName("SPARK_EXECUTOR_POD_NAME").withValue("test-pod-name"),
+      new EnvVar().withName("SPARK_APPLICATION_ID").withValue("test_spark_app_id"),
+      new EnvVar().withName("SPARK_EXECUTOR_CORES").withValue("1"),
+      new EnvVar().withName("SPARK_EXECUTOR_MEMORY").withValue("512m"),
       new EnvVar().withName("SPARK_DRIVER_URL").withValue(driverURL),
       new EnvVar().withName("SPARK_EXECUTOR_POD_IP").withValueFrom(source),
-      new EnvVar().withName("SPARK_EXECUTOR_ID").withValue("1"),
     )
     val executorContainer = Container()
       .withName("spark-executor")
@@ -123,64 +129,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
 
     }
   }
-/*
-  def submitJob2(): Unit = {
-    val sleepContainer = Container()
-      .withName("ls")
-      .withImagePullPolicy("IfNotPresent")
-      .withImage("alpine:3.10")
-      .withCommand(Seq("ls"))
-      .withArgs(
-        Seq(
-          "-c",
-          "ls -l; sleep 30; date; echo '========'; ls -l; sleep 10; date"
-        )
-      )
-      .withResources(
-        ResourceRequirements(
-          limits = Map(
-            "memory" -> Quantity(Option("10Mi")),
-            "cpu" -> Quantity(Option("100m"))
-          ),
-          requests = Map(
-            "memory" -> Quantity(Option("10Mi")),
-            "cpu" -> Quantity(Option("100m"))
-          )
-        )
-      )
-
-    val podSpec = PodSpec()
-      .withTerminationGracePeriodSeconds(0)
-      .withRestartPolicy("Never")
-      .withContainers(Seq(sleepContainer))
-
-    val testJob = api.submit
-      .JobSubmitRequestItem()
-      .withPriority(0)
-      .withNamespace("personal-anonymous")
-      .withPodSpec(podSpec)
-
-    val testJobRequest = api.submit.JobSubmitRequest(
-      queue = "e2e-test-queue",
-      jobSetId = "spark-test-1",
-      jobRequestItems = Seq(testJob)
-    )
-
-    val channel =
-      ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
-    val blockingStub = SubmitGrpc.blockingStub(channel)
-
-    val jobSubmitResponse = blockingStub.submitJobs(testJobRequest)
-
-    println(s"Job Submit Response")
-    for (respItem <- jobSubmitResponse.jobResponseItems) {
-      println(s"JobID: ${respItem.jobId}  Error: ${respIteme.rror} ")
-    }
-  }
- */
     override def start(): Unit = {
-      //val j =  io.armadaproject.armada.Job
-      //j.submitJob()
       submitJob()
     }
 
@@ -203,7 +152,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
-      logInfo("gbj8 driver endpoint")
+      logInfo("gbj12 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 
