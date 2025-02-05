@@ -23,7 +23,7 @@
               - --class
               - org.apache.spark.examples.SparkPi
               - --master                                        
-              - armada:172.20.0.3:30002
+              - armada:armada-server.armada.svc.cluster.local:50051
               - --conf
               - "spark.driver.port=7078"
               - --conf
