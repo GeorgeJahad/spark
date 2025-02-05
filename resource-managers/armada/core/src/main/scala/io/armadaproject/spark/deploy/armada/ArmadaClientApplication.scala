@@ -41,6 +41,12 @@ import org.apache.spark.internal.LogKeys.{APP_ID, APP_NAME, SUBMISSION_ID}
 import org.apache.spark.util.Utils
 */
 
+import io.grpc.ManagedChannelBuilder
+import k8s.io.api.core.v1.generated.{Container, PodSpec, ResourceRequirements}
+import k8s.io.api.core.v1.generated.{EnvVar, EnvVarSource, ObjectFieldSelector}
+import k8s.io.apimachinery.pkg.api.resource.generated.Quantity
+import api.submit.SubmitGrpc
+
 /**
  * Encapsulates arguments to the submission client.
  *
@@ -233,6 +239,79 @@ private[spark] class ArmadaClientApplication extends SparkApplication {
   override def start(args: Array[String], conf: SparkConf): Unit = {
     run(conf)
   }
+  def submitJob(): Unit = {
+
+    val host = "localhost"
+    val port = 30002
+
+    val source = new EnvVarSource().withFieldRef(new ObjectFieldSelector().withApiVersion("v1").withFieldPath("status.podIP"))
+    val envVars = Seq(
+      new EnvVar().withName("SPARK_DRIVER_BIND_ADDRESS").withValueFrom(source),
+    )
+    val executorContainer = Container()
+      .withName("spark-driver")
+      .withImagePullPolicy("IfNotPresent")
+      .withImage("spark:testing")
+      .withEnv(envVars)
+      .withCommand(Seq("/opt/entrypoint.sh"))
+      .withArgs(
+        Seq(
+          "driver",
+          "--verbose",
+          "--class",
+          "org.apache.spark.examples.SparkPi",
+          "--master",
+          "armada:172.20.0.3:30002",
+          "--conf",
+          "spark.driver.port=7078",
+          "--conf",
+          "spark.driver.extraJavaOptions=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 -Djava.net.preferIPv4Stack=true",
+          "local:///opt/spark/examples/jars/spark-examples.jar",
+          "100",
+        )
+      )
+      .withResources(
+        ResourceRequirements(
+          limits = Map(
+            "memory" -> Quantity(Option("1000Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          ),
+          requests = Map(
+            "memory" -> Quantity(Option("1000Mi")),
+            "cpu" -> Quantity(Option("100m"))
+          )
+        )
+      )
+
+    val podSpec = PodSpec()
+      .withTerminationGracePeriodSeconds(0)
+      .withRestartPolicy("Never")
+      .withContainers(Seq(executorContainer))
+
+    val testJob = api.submit
+      .JobSubmitRequestItem()
+      .withPriority(0)
+      .withNamespace("default")
+      .withPodSpec(podSpec)
+
+    val testJobRequest = api.submit.JobSubmitRequest(
+      queue = "test",
+      jobSetId = "driver",
+      jobRequestItems = Seq(testJob)
+    )
+
+    val channel =
+      ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
+    val blockingStub = SubmitGrpc.blockingStub(channel)
+
+    val jobSubmitResponse = blockingStub.submitJobs(testJobRequest)
+
+    println(s"Armada Client Job Submit Response")
+    for (respItem <- jobSubmitResponse.jobResponseItems) {
+      println(s"JobID: ${respItem.jobId}  Error: ${respItem.error} ")
+
+    }
+  }
 
   private def run(sparkConf: SparkConf): Unit = {
     // For constructing the app ID, we can't use the Spark application name, as the app ID is going
@@ -268,6 +347,6 @@ private[spark] class ArmadaClientApplication extends SparkApplication {
         client.run()
     }
     */
-    ()
+    submitJob()
   }
 }
