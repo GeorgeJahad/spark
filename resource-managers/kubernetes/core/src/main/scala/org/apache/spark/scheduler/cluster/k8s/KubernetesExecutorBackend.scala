@@ -193,7 +193,7 @@ private[spark] object KubernetesExecutorBackend extends Logging {
           printUsageAndExit(classNameForEntry)
       }
     }
-    log.info("gbj14 executor")
+    log.info("gbj15 executor")
 
     if (hostname == null) {
       hostname = Utils.localHostName()

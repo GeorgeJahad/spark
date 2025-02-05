@@ -53,7 +53,8 @@ private[spark] class ArmadaClusterSchedulerBackend(
   def submitJob(): Unit = {
 
     val urlArray = masterURL.split(":")
-    val host = urlArray(1)
+    // Remove leading "/"'s
+    val host = if (urlArray(1).startsWith("/")) urlArray(1).substring(2) else urlArray(1)
     val port = urlArray(2).toInt
 
     val driverAddr = sys.env("SPARK_DRIVER_BIND_ADDRESS")
@@ -140,7 +141,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
-      logInfo("gbj14 driver endpoint")
+      logInfo("gbj15 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 
@@ -160,7 +161,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
             executorsPendingDecommission.get(id) match {
               case Some(host) =>
                 // We don't pass through the host because by convention the
-                // host is only populated if the entire host is going away
+              // host is only populated if the entire host is going away
                 // and we don't know if that's the case or just one container.
                 removeExecutor(id, ExecutorDecommission(None))
               case _ =>
