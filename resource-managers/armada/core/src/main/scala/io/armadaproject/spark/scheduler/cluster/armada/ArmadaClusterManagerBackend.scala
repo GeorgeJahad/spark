@@ -29,18 +29,13 @@ import io.grpc.ManagedChannelBuilder
 import k8s.io.api.core.v1.generated.{Container, PodSpec, ResourceRequirements}
 import k8s.io.api.core.v1.generated.{EnvVar, EnvVarSource, ObjectFieldSelector}
 import k8s.io.apimachinery.pkg.api.resource.generated.Quantity
-import api.submit.SubmitGrpc
 
-
-
-// FIXME: Actually import ArmadaClient
-class ArmadaClient {}
+import io.armadaproject.armada.ArmadaClient
 
 // TODO: Implement for Armada
 private[spark] class ArmadaClusterSchedulerBackend(
     scheduler: TaskSchedulerImpl,
     sc: SparkContext,
-    armadaClient: ArmadaClient,
     executorService: ScheduledExecutorService,
     masterURL: String)
     extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv) {
@@ -111,17 +106,10 @@ private[spark] class ArmadaClusterSchedulerBackend(
       .withNamespace("default")
       .withPodSpec(podSpec)
 
-    val testJobRequest = api.submit.JobSubmitRequest(
-      queue = "test",
-      jobSetId = "executor",
-      jobRequestItems = Seq(testJob)
-    )
-
     val channel =
       ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
-    val blockingStub = SubmitGrpc.blockingStub(channel)
 
-    val jobSubmitResponse = blockingStub.submitJobs(testJobRequest)
+    val jobSubmitResponse = new ArmadaClient(channel).SubmitJobs("test", "executor", Seq(testJob))
 
     println(s"Job Submit Response")
     for (respItem <- jobSubmitResponse.jobResponseItems) {
@@ -152,7 +140,7 @@ private[spark] class ArmadaClusterSchedulerBackend(
     }
 
     override def createDriverEndpoint(): DriverEndpoint = {
-      logInfo("gbj12 driver endpoint")
+      logInfo("gbj14 driver endpoint")
       new ArmadaDriverEndpoint()
     }
 

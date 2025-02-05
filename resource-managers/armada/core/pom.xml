@@ -94,7 +94,7 @@
     </dependency>
 
     <dependency>
-      <groupId>scala-armada-client</groupId>
+      <groupId>io.armadaproject.armada</groupId>
       <artifactId>scala-armada-client_2.13</artifactId>
       <version>0.1.0-SNAPSHOT</version>
     </dependency>
