@@ -13,9 +13,20 @@ jobs:
           path: spark-armada
       - uses: actions/checkout@v4
         with:
+          repository: richscott/armada
+          ref: rich/scala-build-container2
+          path: armada
+      - uses: actions/checkout@v4
+        with:
           repository: armadaproject/armada-operator
           path: armada-operator
       - run: |
+          cd armada/client/scala/scala-armada-client
+          # "install" sbt by reusing the one coming with Spark
+          ln -s ../../../../spark-armada/build
+          ./build/sbt -Dsbt.io.implicit.relative.glob.conversion=allow publishM2
+          cd ..
+
           cd spark-armada
           ./build/sbt package -Parmada -Pkubernetes
           ./bin/docker-image-tool.sh -t testing build
@@ -34,8 +45,7 @@ jobs:
           # sleep a bit, or we see: rpc error: code = PermissionDenied desc = could not find queue "test"
           sleep 60
 
-          ./bin/app/armadactl submit ../spark-armada/examples/spark-driver-job.yaml
-          ./bin/app/armadactl submit ../spark-armada/examples/spark-executor-job.yaml
+          ./bin/app/armadactl submit <SPARK-ROOT>/examples/spark-pi-driver.yaml
 
           # wait for the jobs to start
           sleep 60
