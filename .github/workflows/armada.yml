@@ -13,9 +13,35 @@ jobs:
           path: spark-armada
       - uses: actions/checkout@v4
         with:
+          repository: richscott/armada
+          ref: rich/scala-build-container2
+          path: armada
+      - uses: actions/checkout@v4
+        with:
           repository: armadaproject/armada-operator
           path: armada-operator
+      - name: install sbt
+        env:
+          SBT_VERSION: 1.10.7
+          SCALA_VERSION: 2.13.15
+        run: |
+          curl -s -O https://downloads.lightbend.com/scala/${SCALA_VERSION}/scala-${SCALA_VERSION}.deb
+          sudo apt install -y ./scala-${SCALA_VERSION}.deb
+          curl -s -L -O https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz
+          tar -xzvf ./sbt-${SBT_VERSION}.tgz
+          echo "$PWD/sbt/bin" >> "${GITHUB_PATH}"
+          curl -s -L -O https://github.com/magefile/mage/releases/download/v1.15.0/mage_1.15.0_Linux-64bit.tar.gz
+          tar -xzvf ./mage_1.15.0_Linux-64bit.tar.gz mage
+          sudo apt install -y protobuf-compiler
       - run: |
+          cd armada
+          ../mage buildScala
+          cd ..
+
+          cd armada/client/scala/scala-armada-client
+          sbt -Dsbt.io.implicit.relative.glob.conversion=allow publishM2
+          cd ..
+
           cd spark-armada
           ./build/sbt package -Parmada -Pkubernetes
           ./bin/docker-image-tool.sh -t testing build
@@ -34,8 +60,7 @@ jobs:
           # sleep a bit, or we see: rpc error: code = PermissionDenied desc = could not find queue "test"
           sleep 60
 
-          ./bin/app/armadactl submit ../spark-armada/examples/spark-driver-job.yaml
-          ./bin/app/armadactl submit ../spark-armada/examples/spark-executor-job.yaml
+          ./bin/app/armadactl submit ../spark-armada/examples/spark-pi-driver.yaml
 
           # wait for the jobs to start
           sleep 60
