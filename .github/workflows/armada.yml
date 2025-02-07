@@ -20,7 +20,7 @@ jobs:
         with:
           repository: armadaproject/armada-operator
           path: armada-operator
-      - name: install sbt
+      - name: Install Scala and SBT
         env:
           SBT_VERSION: 1.10.7
           SCALA_VERSION: 2.13.15
@@ -30,16 +30,18 @@ jobs:
           curl -s -L -O https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz
           tar -xzvf ./sbt-${SBT_VERSION}.tgz
           echo "$PWD/sbt/bin" >> "${GITHUB_PATH}"
-      - run: |
+      - name: Build Armada Scala Client
+        run: |
           cd armada
           docker build -t armada-scala-client-builder -f build/scala-client/Dockerfile .
+          echo docker run --rm -u $(id -u):$(id -u) -v "$PWD:/build" -w /build armada-scala-client-builder
           docker run --rm -u $(id -u):$(id -u) -v "$PWD:/build" -w /build armada-scala-client-builder
           cd ..
 
           cd armada/client/scala/scala-armada-client
           sbt -Dsbt.io.implicit.relative.glob.conversion=allow publishM2
-          cd ..
-
+      - name: Build Spark Docker image
+        run: |
           cd spark-armada
           ./build/sbt package -Parmada -Pkubernetes
           ./bin/docker-image-tool.sh -t testing build
@@ -50,6 +52,8 @@ jobs:
           make kind-all
           ./bin/tooling/kind load image-archive ../spark_testing.tar --name armada
 
+      - name: Submit Spark app
+        run: |
           # sleep a bit, or we see: create queue request failed: rpc error: code = DeadlineExceeded
           sleep 60
 
@@ -63,7 +67,8 @@ jobs:
           # wait for the jobs to start
           sleep 60
 
-          # inspect jobs
+      - name: Inspect k8s pods
+        run: |
           kubectl get pods
           for pod in $(kubectl get pods | grep armada | cut -d " " -f 1)
           do
