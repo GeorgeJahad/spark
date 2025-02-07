@@ -30,12 +30,10 @@ jobs:
           curl -s -L -O https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz
           tar -xzvf ./sbt-${SBT_VERSION}.tgz
           echo "$PWD/sbt/bin" >> "${GITHUB_PATH}"
-          curl -s -L -O https://github.com/magefile/mage/releases/download/v1.15.0/mage_1.15.0_Linux-64bit.tar.gz
-          tar -xzvf ./mage_1.15.0_Linux-64bit.tar.gz mage
-          sudo apt install -y protobuf-compiler
       - run: |
           cd armada
-          ../mage buildScala
+          docker build -t armada-scala-client-builder -f build/scala-client/Dockerfile .
+          docker run --rm -u $(id -u):$(id -u) -v "$PWD:/build" -w /build armada-scala-client-builder
           cd ..
 
           cd armada/client/scala/scala-armada-client
