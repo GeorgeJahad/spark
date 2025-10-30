@@ -288,7 +288,9 @@ private[storage] class BlockManagerDecommissioner(
       s"are added. In total, $remainedShuffles shuffles are remained.")
 
     // Update the threads doing migrations
-    val livePeerSet = bm.getPeers(false).toSet
+    val peersEnabled = conf.get(config.STORAGE_DECOMMISSION_SHUFFLE_MAX_DISK_SIZE).exists(_ > 0)
+    val livePeerSet = if (peersEnabled) bm.getPeers(false).toSet
+      else Set(FallbackStorage.FALLBACK_BLOCK_MANAGER_ID)
     val currentPeerSet = migrationPeers.keys.toSet
     val deadPeers = currentPeerSet.diff(livePeerSet)
     // Randomize the orders of the peers to avoid hotspot nodes.

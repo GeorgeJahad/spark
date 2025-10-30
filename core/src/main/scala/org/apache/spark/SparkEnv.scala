@@ -37,7 +37,8 @@ import org.apache.spark.internal.{config, Logging}
 import org.apache.spark.internal.config._
 import org.apache.spark.memory.{MemoryManager, UnifiedMemoryManager}
 import org.apache.spark.metrics.{MetricsSystem, MetricsSystemInstances}
-import org.apache.spark.network.netty.{NettyBlockTransferService, SparkTransportConf}
+import org.apache.spark.network.BlockTransferService
+import org.apache.spark.network.netty.SparkTransportConf
 import org.apache.spark.network.shuffle.ExternalBlockStoreClient
 import org.apache.spark.rpc.{RpcEndpoint, RpcEndpointRef, RpcEnv}
 import org.apache.spark.scheduler.{LiveListenerBus, OutputCommitCoordinator}
@@ -357,9 +358,17 @@ object SparkEnv extends Logging {
       conf,
       isDriver)
 
+    val blockTransferServiceClassName = conf.get(config.SHUFFLE_BLOCK_TRANSFER_SERVICE)
+      .getOrElse(classOf[org.apache.spark.network.netty.NettyBlockTransferService].getName)
+    val blockTransferServiceCls = Utils.classForName(blockTransferServiceClassName)
     val blockTransferService =
-      new NettyBlockTransferService(conf, securityManager, serializerManager, bindAddress,
-        advertiseAddress, blockManagerPort, numUsableCores, blockManagerMaster.driverEndpoint)
+      blockTransferServiceCls.getConstructor(
+        classOf[SparkConf], classOf[SecurityManager], classOf[SerializerManager],
+        classOf[String], classOf[String], classOf[Int], classOf[Int], classOf[RpcEndpointRef])
+        .newInstance(conf, securityManager, serializerManager, bindAddress, advertiseAddress,
+          java.lang.Integer.valueOf(blockManagerPort), java.lang.Integer.valueOf(numUsableCores),
+          blockManagerMaster.driverEndpoint)
+        .asInstanceOf[BlockTransferService]
 
     // NB: blockManager is not valid until initialize() is called later.
     val blockManager = new BlockManager(

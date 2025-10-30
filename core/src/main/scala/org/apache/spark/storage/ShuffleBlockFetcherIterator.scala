@@ -33,10 +33,10 @@ import io.netty.util.internal.OutOfDirectMemoryError
 import org.apache.commons.io.IOUtils
 import org.roaringbitmap.RoaringBitmap
 
-import org.apache.spark.{MapOutputTracker, SparkException, TaskContext}
+import org.apache.spark.{MapOutputTracker, SparkEnv, SparkException, TaskContext}
 import org.apache.spark.MapOutputTracker.SHUFFLE_PUSH_MAP_ID
 import org.apache.spark.errors.SparkCoreErrors
-import org.apache.spark.internal.Logging
+import org.apache.spark.internal.{config, Logging}
 import org.apache.spark.network.buffer.{FileSegmentManagedBuffer, ManagedBuffer}
 import org.apache.spark.network.shuffle._
 import org.apache.spark.network.shuffle.checksum.{Cause, ShuffleChecksumHelper}
@@ -962,13 +962,28 @@ final class ShuffleBlockFetcherIterator(
           }
 
         case FailureFetchResult(blockId, mapIndex, address, e) =>
+          var error = e
           var errorMsg: String = null
           if (e.isInstanceOf[OutOfDirectMemoryError]) {
             errorMsg = s"Block $blockId fetch failed after $maxAttemptsOnNettyOOM " +
               s"retries due to Netty OOM"
             logError(errorMsg)
+          } else if (
+            SparkEnv.get.conf.get(config.STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined) {
+            try {
+              val buf = FallbackStorage.read(SparkEnv.get.conf, blockId)
+              results.put(SuccessFetchResult(blockId, mapIndex, address, buf.size(), buf,
+                isNetworkReqDone = false))
+              result = null
+              error = null
+            } catch {
+              case t: Throwable =>
+                logInfo(s"Failed to read block from fallback storage: $blockId", t)
+            }
           }
-          throwFetchFailedException(blockId, mapIndex, address, e, Some(errorMsg))
+          if (error != null) {
+            throwFetchFailedException(blockId, mapIndex, address, error, Some(errorMsg))
+          }
 
         case DeferFetchRequestResult(request) =>
           val address = request.address

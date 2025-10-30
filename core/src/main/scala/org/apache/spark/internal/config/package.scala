@@ -504,11 +504,41 @@ package object config {
     ConfigBuilder("spark.storage.decommission.fallbackStorage.path")
       .doc("The location for fallback storage during block manager decommissioning. " +
         "For example, `s3a://spark-storage/`. In case of empty, fallback storage is disabled. " +
-        "The storage should be managed by TTL because Spark will not clean it up.")
+        "The storage should be managed by TTL because Spark will not clean it up, " +
+        "unless spark.storage.decommission.fallbackStorage.cleanUp is true.")
       .version("3.1.0")
       .stringConf
       .checkValue(_.endsWith(java.io.File.separator), "Path should end with separator.")
       .createOptional
+
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_SUBPATHS =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.subPaths")
+      .doc("The fallback storage puts all files of one shuffle in one directory when this is 0. " +
+        "When this option is larger than 0, it will instead distribute the files across " +
+        "this number of subdirectories.")
+      .version("4.0.0")
+      .intConf
+      .checkValue(_ >= 0, "The number of subdirectories must be 0 or larger.")
+      .createWithDefault(Int.MaxValue)
+
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_REPLICATION_DELAY =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.replicationDelay")
+      .doc("The maximum expected delay for files written by one executor to become " +
+        "available to other executors.")
+      .version("4.0.0")
+      .timeConf(TimeUnit.SECONDS)
+      .checkValue(_ > 0, "Value must be positive.")
+      .createOptional
+
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_REPLICATION_WAIT =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.replicationWait")
+      .doc("When an executor cannot find a file in the fallback storage it waits " +
+        "this amount of time before attempting to open the file again, " +
+        f"while not exceeding ${STORAGE_DECOMMISSION_FALLBACK_STORAGE_REPLICATION_DELAY.key}.")
+      .version("4.0.0")
+      .timeConf(TimeUnit.SECONDS)
+      .checkValue(_ > 0, "Value must be positive.")
+      .createWithDefaultString("1s")
 
   private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP =
     ConfigBuilder("spark.storage.decommission.fallbackStorage.cleanUp")
@@ -1564,6 +1594,12 @@ package object config {
       .version("1.1.0")
       .stringConf
       .createWithDefault("sort")
+
+  private[spark] val SHUFFLE_BLOCK_TRANSFER_SERVICE =
+    ConfigBuilder("spark.shuffle.blockTransferService")
+      .version("4.0.0")
+      .stringConf
+      .createOptional
 
   private[spark] val SHUFFLE_REDUCE_LOCALITY_ENABLE =
     ConfigBuilder("spark.shuffle.reduceLocality.enabled")
