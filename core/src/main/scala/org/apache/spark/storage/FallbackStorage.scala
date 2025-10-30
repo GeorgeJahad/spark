@@ -52,6 +52,7 @@ private[storage] class FallbackStorage(conf: SparkConf) extends Logging {
   private val fallbackFileSystem = FileSystem.get(fallbackPath.toUri, hadoopConf)
   private val appId = conf.getAppId
 
+  val gbjFbs = "gbjFbs"
   // Visible for testing
   def copy(
       shuffleBlockInfo: ShuffleBlockInfo,
@@ -218,6 +219,7 @@ private[spark] object FallbackStorage extends Logging {
                           filesystem: FileSystem,
                           path: Path,
                           clock: Clock = new SystemClock()): FSDataInputStream = {
+    logInfo("gbj shuffle file open")
     val replicationDelay = conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_REPLICATION_DELAY)
     if (replicationDelay.isDefined) {
       val replicationDeadline = clock.getTimeMillis() + replicationDelay.get * 1000

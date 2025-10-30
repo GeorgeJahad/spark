@@ -78,6 +78,7 @@ fi
 # SPARK-43540: add current working directory into executor classpath
 SPARK_CLASSPATH="$SPARK_CLASSPATH:$PWD"
 
+echo gbj starting fbs
 case "$1" in
   driver)
     shift 1
