@@ -194,7 +194,7 @@ class SparkContext(config: SparkConf) extends Logging {
     this(master, appName, sparkHome, jars, Map())
 
   // log out Spark Version in Spark driver log
-  logInfo(s"gbjRunning Spark version $SPARK_VERSION")
+  logInfo(s"gbjfrunning Running Spark version $SPARK_VERSION")
   logInfo(s"OS info ${System.getProperty("os.name")}, ${System.getProperty("os.version")}, " +
     s"${System.getProperty("os.arch")}")
   logInfo(s"Java version ${System.getProperty("java.version")}")

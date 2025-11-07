@@ -78,7 +78,10 @@ fi
 # SPARK-43540: add current working directory into executor classpath
 SPARK_CLASSPATH="$SPARK_CLASSPATH:$PWD"
 
-echo gbj starting fbs
+#export EXECUTOR_SERVICE_NAME=armada-$ARMADA_JOB_ID-0
+export EXECUTOR_SERVICE_NAME=$SPARK_EXECUTOR_POD_IP
+
+echo gbj starting fbs with service $EXECUTOR_SERVICE_NAME
 case "$1" in
   driver)
     shift 1

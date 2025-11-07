@@ -57,6 +57,7 @@ private[storage] class FallbackStorage(conf: SparkConf) extends Logging {
   def copy(
       shuffleBlockInfo: ShuffleBlockInfo,
       bm: BlockManager): Unit = {
+    logInfo("gbjf1")
     val shuffleId = shuffleBlockInfo.shuffleId
     val mapId = shuffleBlockInfo.mapId
 
@@ -91,6 +92,7 @@ private[storage] class FallbackStorage(conf: SparkConf) extends Logging {
   }
 
   def exists(shuffleId: Int, filename: String): Boolean = {
+    logInfo("gbjf2")
     fallbackFileSystem.exists(getPath(conf, appId, shuffleId, filename))
   }
 }
@@ -106,6 +108,7 @@ private[storage] class FallbackStorageRpcEndpointRef(conf: SparkConf, hadoopConf
   override def ask[T: ClassTag](message: Any, timeout: RpcTimeout): Future[T] = {
     message match {
       case RemoveShuffle(shuffleId) =>
+        logInfo("gbjf3")
         FallbackStorage.cleanUp(conf, hadoopConf, Some(shuffleId))
         Future{true.asInstanceOf[T]}
       case _ => Future{true.asInstanceOf[T]}
@@ -118,6 +121,7 @@ private[spark] object FallbackStorage extends Logging {
   val FALLBACK_BLOCK_MANAGER_ID: BlockManagerId = BlockManagerId("fallback", "remote", 7337)
 
   def getFallbackStorage(conf: SparkConf): Option[FallbackStorage] = {
+    logInfo("gbjf4")
     if (conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined) {
       Some(new FallbackStorage(conf))
     } else {
@@ -129,6 +133,7 @@ private[spark] object FallbackStorage extends Logging {
   def registerBlockManagerIfNeeded(master: BlockManagerMaster,
                                    conf: SparkConf,
                                    hadoopConf: Configuration): Unit = {
+    logInfo("gbjf5")
     if (conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined) {
       master.registerBlockManager(
         FALLBACK_BLOCK_MANAGER_ID, Array.empty[String], 0, 0,
@@ -139,6 +144,7 @@ private[spark] object FallbackStorage extends Logging {
   /** Clean up the generated fallback location for this app. */
   /** Clean up the generated fallback location for this app (and shuffle id if given). */
   def cleanUp(conf: SparkConf, hadoopConf: Configuration, shuffleId: Option[Int] = None): Unit = {
+    logInfo("gbjf6")
     if (conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined &&
         conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP) &&
         conf.contains("spark.app.id")) {
@@ -162,6 +168,7 @@ private[spark] object FallbackStorage extends Logging {
 
   /** Report block status to block manager master and map output tracker master. */
   private def reportBlockStatus(blockManager: BlockManager, blockId: BlockId, dataLength: Long) = {
+    logInfo("gbjf7")
     assert(blockManager.master != null)
     blockManager.master.updateBlockInfo(
       FALLBACK_BLOCK_MANAGER_ID, blockId, StorageLevel.DISK_ONLY, memSize = 0, dataLength)
@@ -174,6 +181,7 @@ private[spark] object FallbackStorage extends Logging {
                                appId: String,
                                shuffleId: Int,
                                filename: String): Path = {
+    logInfo("gbjf8")
     val fallbackPath = new Path(conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).get)
     val subPaths = conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_SUBPATHS)
     if (subPaths > 0) {
@@ -194,6 +202,7 @@ private[spark] object FallbackStorage extends Logging {
                    deadlineMs: Long,
                    waitMs: Long,
                    clock: Clock) : FSDataInputStream = {
+    logInfo("gbjf9")
     try {
       filesystem.open(path)
     } catch {
@@ -219,6 +228,7 @@ private[spark] object FallbackStorage extends Logging {
                           filesystem: FileSystem,
                           path: Path,
                           clock: Clock = new SystemClock()): FSDataInputStream = {
+    logInfo("gbjf10")
     logInfo("gbj shuffle file open")
     val replicationDelay = conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_REPLICATION_DELAY)
     if (replicationDelay.isDefined) {
@@ -242,6 +252,7 @@ private[spark] object FallbackStorage extends Logging {
    * Read a ManagedBuffer.
    */
   def read(conf: SparkConf, blockId: BlockId): ManagedBuffer = {
+    logInfo("gbjf11")
     logInfo(s"Read $blockId")
     val fallbackPath = new Path(conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).get)
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
@@ -278,6 +289,7 @@ private[spark] object FallbackStorage extends Logging {
           f.seek(offset)
           f.readFully(array)
           logDebug(s"Took ${(System.nanoTime() - startTimeNs) / (1000 * 1000)}ms")
+          logInfo("gbj shuffle fallback read")
         }
         new NioManagedBuffer(ByteBuffer.wrap(array))
       }
