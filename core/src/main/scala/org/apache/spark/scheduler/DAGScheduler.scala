@@ -2658,6 +2658,22 @@ private[spark] class DAGScheduler(
             mapOutputTracker.removeOutputsOnExecutor(execId)
         }
       }
+    } else {
+      // we only get here if fallback storage is reliable
+      // see LocalDiskShuffleDriverComponents.supportsReliableStorage
+      if (FallbackStorage.isConfigured(env.conf)) {
+        hostToUnregisterOutputs match {
+          case Some(host) =>
+            logInfo("Relocating shuffle files of host to Fallback Storage: " +
+              s"$host (epoch $currentEpoch")
+            mapOutputTracker.updateOutputsOnHost(host, FallbackStorage.FALLBACK_BLOCK_MANAGER_ID)
+          case None =>
+            logInfo("Relocating shuffle files of executor to Fallback Storage: " +
+              s"$execId (epoch $currentEpoch)")
+            mapOutputTracker.updateOutputsOnExecutor(
+              execId, FallbackStorage.FALLBACK_BLOCK_MANAGER_ID)
+        }
+      }
     }
   }
 

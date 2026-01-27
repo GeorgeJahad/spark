@@ -28,6 +28,7 @@ import org.apache.spark._
 import org.apache.spark.errors.SparkCoreErrors
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config
+import org.apache.spark.internal.config.STORAGE_DECOMMISSION_SHUFFLE_MAX_DISK_SIZE
 import org.apache.spark.shuffle.ShuffleBlockInfo
 import org.apache.spark.storage.BlockManagerMessages.ReplicateBlock
 import org.apache.spark.util.{ThreadUtils, Utils}
@@ -287,8 +288,15 @@ private[storage] class BlockManagerDecommissioner(
     logInfo(s"${newShufflesToMigrate.size} of ${localShuffles.size} local shuffles " +
       s"are added. In total, $remainedShuffles shuffles are remained.")
 
+    // migrate to fallback storage only if
+    // STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH is set and
+    // STORAGE_DECOMMISSION_SHUFFLE_MAX_DISK_SIZE is 0
+    val fallbackOnly = conf.get(config.STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined &&
+      conf.get(STORAGE_DECOMMISSION_SHUFFLE_MAX_DISK_SIZE).contains(0)
+
     // Update the threads doing migrations
-    val livePeerSet = bm.getPeers(false).toSet
+    val livePeerSet = if (fallbackOnly) Set(FallbackStorage.FALLBACK_BLOCK_MANAGER_ID)
+      else bm.getPeers(false).toSet
     val currentPeerSet = migrationPeers.keys.toSet
     val deadPeers = currentPeerSet.diff(livePeerSet)
     // Randomize the orders of the peers to avoid hotspot nodes.
