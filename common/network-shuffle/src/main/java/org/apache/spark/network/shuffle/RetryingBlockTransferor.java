@@ -172,9 +172,11 @@ public class RetryingBlockTransferor {
     try {
       transferStarter.createAndStart(blockIdsToTransfer, myListener);
     } catch (Exception e) {
-      logger.error(String.format("Exception while beginning %s of %s outstanding blocks %s",
-        listener.getTransferType(), blockIdsToTransfer.length,
-        numRetries > 0 ? "(after " + numRetries + " retries)" : ""), e);
+      if (listener.logBlockTransferExceptions()) {
+        logger.error(String.format("Exception while beginning %s of %s outstanding blocks %s",
+          listener.getTransferType(), blockIdsToTransfer.length,
+          numRetries > 0 ? "(after " + numRetries + " retries)" : ""), e);
+      }
 
       if (shouldRetry(e)) {
         initiateRetry(e);

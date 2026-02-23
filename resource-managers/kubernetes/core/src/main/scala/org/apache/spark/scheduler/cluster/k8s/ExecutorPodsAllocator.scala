@@ -466,14 +466,24 @@ class ExecutorPodsAllocator(
         .build()
       val resources = replacePVCsIfNeeded(
         podWithAttachedContainer, resolvedExecutorSpec.executorKubernetesResources, reusablePVCs)
+      val annotation = OWNER_REFERENCE_ANNOTATION
+      val driverValue = OWNER_REFERENCE_ANNOTATION_DRIVER_VALUE
+      val executorValue = OWNER_REFERENCE_ANNOTATION_EXECUTOR_VALUE
+      val (driverResources, executorResources) = resources.partition(
+        _.getMetadata.getAnnotations.getOrDefault(annotation, executorValue) == driverValue
+      )
       val createdExecutorPod =
         kubernetesClient.pods().inNamespace(namespace).resource(podWithAttachedContainer).create()
       try {
-        addOwnerReference(createdExecutorPod, resources)
+        addOwnerReference(createdExecutorPod, executorResources)
+        if (driverResources.nonEmpty && driverPod.nonEmpty) {
+          addOwnerReference(driverPod.get, driverResources)
+        }
         kubernetesClient.resourceList(resources: _*).forceConflicts().serverSideApply()
         resources
           .filter(_.getKind == "PersistentVolumeClaim")
           .foreach { resource =>
+            // TODO: add annotation "ownerReference: driver" to pvc resources so this gets obsolete
             if (conf.get(KUBERNETES_DRIVER_OWN_PVC) && driverPod.nonEmpty) {
               addOwnerReference(driverPod.get, Seq(resource))
             }

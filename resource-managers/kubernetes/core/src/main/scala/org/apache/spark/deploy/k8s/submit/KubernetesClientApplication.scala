@@ -25,7 +25,7 @@ import io.fabric8.kubernetes.api.model._
 import io.fabric8.kubernetes.client.{KubernetesClient, Watch}
 import io.fabric8.kubernetes.client.Watcher.Action
 
-import org.apache.spark.SparkConf
+import org.apache.spark.{SparkConf, SparkException}
 import org.apache.spark.deploy.SparkApplication
 import org.apache.spark.deploy.k8s._
 import org.apache.spark.deploy.k8s.Config._
@@ -198,6 +198,32 @@ private[spark] class Client(
           // Break the while loop if the pod is completed or we don't want to wait
           if (watcher.watchOrStop(sId)) {
             watch.close()
+            // Check container status
+            val containerStatus: Option[ContainerStatus] = Option(
+              podWithName.get.getStatus.getContainerStatuses
+            )
+              .flatMap(_.asScala.find(_.getName == DEFAULT_DRIVER_CONTAINER_NAME))
+
+            containerStatus match {
+              case Some(status) =>
+                // Get exit code if the container has terminated
+                Option(status.getState.getTerminated) match {
+                  case Some(terminated) =>
+                    if (terminated.getExitCode != 0) {
+                      throw new SparkException(s"Container $DEFAULT_DRIVER_CONTAINER_NAME exited" +
+                        s"with code ${terminated.getExitCode}")
+                    }
+                    // Break the while loop if the pod is completed or we don't want to wait
+                    break
+                  case None =>
+                    logWarning(
+                      "Exit Code: Not available (container still running or not terminated)"
+                    )
+                }
+              case None =>
+                logWarning(s"Container $DEFAULT_DRIVER_CONTAINER_NAME not found in the pod.")
+            }
+            // Break the while loop if the pod is completed or we don't want to wait
             break
           }
         }

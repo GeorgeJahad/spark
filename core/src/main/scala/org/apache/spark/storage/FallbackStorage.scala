@@ -17,29 +17,31 @@
 
 package org.apache.spark.storage
 
-import java.io.DataInputStream
+import java.io.{DataInputStream, InputStream}
 import java.nio.ByteBuffer
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap, TimeUnit}
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
+import io.netty.buffer.Unpooled
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-import org.apache.spark.{SparkConf, SparkException}
+import org.apache.spark.{SparkConf, SparkEnv, SparkException}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.Logging
-import org.apache.spark.internal.config.{STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PROACTIVE_ENABLED, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PROACTIVE_RELIABLE}
-import org.apache.spark.network.buffer.{ManagedBuffer, NioManagedBuffer}
-import org.apache.spark.network.util.JavaUtils
+import org.apache.spark.internal.config.{STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP, STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_THREADS, STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_WAIT_ON_SHUTDOWN, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PROACTIVE_ENABLED, STORAGE_DECOMMISSION_FALLBACK_STORAGE_PROACTIVE_RELIABLE}
+import org.apache.spark.network.buffer.ManagedBuffer
+import org.apache.spark.network.util.{JavaUtils, LimitedInputStream}
 import org.apache.spark.rpc.{RpcAddress, RpcEndpointRef, RpcTimeout}
 import org.apache.spark.shuffle.{IndexShuffleBlockResolver, ShuffleBlockInfo}
 import org.apache.spark.shuffle.IndexShuffleBlockResolver.NOOP_REDUCE_ID
 import org.apache.spark.storage.BlockManagerMessages.RemoveShuffle
 import org.apache.spark.storage.FallbackStorage.asyncCopyExecutionContext
-import org.apache.spark.util.{ThreadUtils, Utils}
+import org.apache.spark.util.{ShutdownHookManager, ThreadUtils, Utils}
 
 /**
  * A fallback storage used by storage decommissioners.
@@ -147,10 +149,51 @@ private[storage] class FallbackStorageRpcEndpointRef(conf: SparkConf, hadoopConf
   override def ask[T: ClassTag](message: Any, timeout: RpcTimeout): Future[T] = {
     message match {
       case RemoveShuffle(shuffleId) =>
-        FallbackStorage.cleanUp(conf, hadoopConf, Some(shuffleId))
+        FallbackStorage.cleanUpAsync(conf, hadoopConf, Some(shuffleId))
         Future{true.asInstanceOf[T]}
       case _ => Future{true.asInstanceOf[T]}
     }
+  }
+}
+
+/**
+ * Lazily reads a segment of an Hadoop FileSystem file, i.e. when createInputStream is called.
+ * @param filesystem hadoop filesystem
+ * @param file path of the file
+ * @param offset offset of the segment
+ * @param length size of the segmetn
+ */
+private[storage] class FileSystemSegmentManagedBuffer(
+    filesystem: FileSystem,
+    file: Path,
+    offset: Long,
+    length: Long) extends ManagedBuffer with Logging {
+
+  override def size(): Long = length
+
+  override def nioByteBuffer(): ByteBuffer = {
+    Utils.tryWithResource(createInputStream()) { in =>
+      ByteBuffer.wrap(in.readAllBytes())
+    }
+  }
+
+  override def createInputStream(): InputStream = {
+    val startTimeNs = System.nanoTime()
+    try {
+      val in = filesystem.open(file)
+      in.seek(offset)
+      new LimitedInputStream(in, length)
+    } finally {
+      logDebug(s"Took ${(System.nanoTime() - startTimeNs) / (1000 * 1000)}ms")
+    }
+  }
+
+  override def retain(): ManagedBuffer = this
+
+  override def release(): ManagedBuffer = this
+
+  override def convertToNetty(): AnyRef = {
+    Unpooled.wrappedBuffer(nioByteBuffer());
   }
 }
 
@@ -180,6 +223,37 @@ private[spark] object FallbackStorage extends Logging {
   private val asyncCopyExecutionContext = ExecutionContext.fromExecutorService(
     ThreadUtils.newDaemonCachedThreadPool("fallback-storage-async-copy", 16))
 
+  /** Shuffle data can be cleaned up asynchronously by adding them to cleanupShufflesQueue. */
+  private case class CleanUp(
+    conf: SparkConf, hadoopConf: Configuration, shuffleId: Option[Int] = None)
+
+  private val stopped = new AtomicBoolean(false)
+
+  // a daemon thread pool for shuffle cleanups
+  private val cleanupShufflesNumThreads =
+    SparkEnv.get.conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_THREADS)
+  private val cleanupShufflesThreadPool =
+    ThreadUtils.newDaemonFixedThreadPool(cleanupShufflesNumThreads, "fallback-storage-cleanup")
+  private val cleanupShufflesExecutionContext =
+    ExecutionContext.fromExecutor(cleanupShufflesThreadPool)
+
+  // Ensure cleanup work only blocks Spark shutdown when configured so
+  private val cleanupShufflesWaitOnShutdown =
+    SparkEnv.get.conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_WAIT_ON_SHUTDOWN)
+
+  ShutdownHookManager.addShutdownHook { () =>
+    // indicate the cleanup thread to terminate once the queue is drained
+    stopped.set(true)
+
+    // only wait for cleanups to finish when configured so
+    if (cleanupShufflesWaitOnShutdown) {
+      cleanupShufflesThreadPool.shutdown()
+      while (!cleanupShufflesThreadPool.awaitTermination(1L, TimeUnit.SECONDS)) {}
+    } else {
+      cleanupShufflesThreadPool.shutdownNow()
+    }
+  }
+
   def getFallbackStorage(conf: SparkConf): Option[FallbackStorage] = {
     if (isConfigured(conf)) {
       Some(new FallbackStorage(conf, FALLBACK_ASYNC_COPIES))
@@ -199,11 +273,30 @@ private[spark] object FallbackStorage extends Logging {
     }
   }
 
+  /**
+   * Asynchronously clean up the generated fallback location for this app (and shuffle id if given).
+   */
+  def cleanUpAsync(
+    conf: SparkConf, hadoopConf: Configuration, shuffleId: Option[Int] = None): Unit = {
+    if (stopped.get()) {
+      logInfo("Not queueing cleanup due to shutdown")
+    } else {
+      Future { cleanUp(conf, hadoopConf, shuffleId) }(cleanupShufflesExecutionContext)
+    }
+  }
+
   /** Clean up the generated fallback location for this app (and shuffle id if given). */
   def cleanUp(conf: SparkConf, hadoopConf: Configuration, shuffleId: Option[Int] = None): Unit = {
     if (isConfigured(conf) &&
         conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP) &&
+        (shuffleId.isDefined ||
+          conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_WAIT_ON_SHUTDOWN)) &&
         conf.contains("spark.app.id")) {
+      if (shuffleId.isDefined) {
+        logInfo(s"Cleaning up shuffle ${shuffleId.get}")
+      } else {
+        logInfo(s"Cleaning up app shuffle data")
+      }
       val fallbackPath = shuffleId.foldLeft(
         new Path(conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).get, conf.getAppId)
       ) { case (path, shuffleId) => new Path(path, shuffleId.toString) }
@@ -263,7 +356,9 @@ private[spark] object FallbackStorage extends Logging {
   }
 
   /**
-   * Read a ManagedBuffer.
+   * Read a block as ManagedBuffer. This reads the index for offset and block size
+   * but does not read the actual block data. Those data are later read when calling
+   * createInputStream() on the returned ManagedBuffer.
    */
   def read(conf: SparkConf, blockId: BlockId): ManagedBuffer = {
     logInfo(s"Read $blockId")
@@ -275,15 +370,7 @@ private[spark] object FallbackStorage extends Logging {
         index.skip(end - (start + 8L))
         val nextOffset = index.readLong()
         val size = nextOffset - offset
-        logDebug(s"To byte array $size")
-        val array = new Array[Byte](size.toInt)
-        val startTimeNs = System.nanoTime()
-        Utils.tryWithResource(fallbackFileSystem.open(dataFile)) { f =>
-          f.seek(offset)
-          f.readFully(array)
-          logDebug(s"Took ${(System.nanoTime() - startTimeNs) / (1000 * 1000)}ms")
-        }
-        new NioManagedBuffer(ByteBuffer.wrap(array))
+        new FileSystemSegmentManagedBuffer(fallbackFileSystem, dataFile, offset, size)
       }
     }
   }

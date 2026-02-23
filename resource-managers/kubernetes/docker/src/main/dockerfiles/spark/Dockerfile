@@ -46,6 +46,7 @@ COPY jars /opt/spark/jars
 COPY RELEAS[E] /opt/spark/RELEASE
 COPY bin /opt/spark/bin
 COPY sbin /opt/spark/sbin
+COPY python /opt/spark/python
 COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
 COPY kubernetes/dockerfiles/spark/decom.sh /opt/
 COPY examples /opt/spark/examples

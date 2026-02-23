@@ -24,14 +24,16 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
 
+import io.netty.buffer.ByteBuf
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FSDataInputStream, LocalFileSystem, Path, PositionedReadable, Seekable}
+import org.apache.hadoop.fs.{FileSystem, FSDataInputStream, LocalFileSystem, Path, PositionedReadable, Seekable}
 import org.mockito.{ArgumentMatchers => mc}
 import org.mockito.Mockito.{mock, never, spy, times, verify, when}
 import org.scalatest.concurrent.Eventually.{eventually, interval, timeout}
 
-import org.apache.spark.{LocalSparkContext, SparkConf, SparkContext, SparkFunSuite, TestUtils}
+import org.apache.spark.{LocalSparkContext, SparkConf, SparkContext, SparkEnv, SparkFunSuite, TestUtils}
 import org.apache.spark.LocalSparkContext.withSpark
+import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.internal.config._
 import org.apache.spark.launcher.SparkLauncher.{EXECUTOR_MEMORY, SPARK_MASTER}
 import org.apache.spark.network.BlockTransferService
@@ -60,6 +62,13 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
          Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
   }
 
+  override def beforeAll(): Unit = {
+    // some tests need a SparkEnv set
+    val sparkEnv = mock(classOf[SparkEnv])
+    when(sparkEnv.conf).thenReturn(getSparkConf())
+    SparkEnv.set(sparkEnv)
+  }
+
   test("fallback storage APIs - copy/exists") {
     val conf = new SparkConf(false)
       .set("spark.app.id", "testId")
@@ -70,7 +79,7 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     val rpcEndpointRef = new FallbackStorageRpcEndpointRef(conf, hadoopConf)
     val fallbackStorage = FallbackStorage.getFallbackStorage(conf).get
-    val bmm = spy(new BlockManagerMaster(rpcEndpointRef, null, conf, false))
+    val bmm = spy[BlockManagerMaster](new BlockManagerMaster(rpcEndpointRef, null, conf, false))
 
     val bm = mock(classOf[BlockManager])
     val dbm = new DiskBlockManager(conf, deleteFilesOnStop = false, isDriver = false)
@@ -126,7 +135,7 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     val rpcEndpointRef = new FallbackStorageRpcEndpointRef(conf, hadoopConf)
     val fallbackStorage = new FallbackStorage(conf, asyncCopies)
-    val bmm = spy(new BlockManagerMaster(rpcEndpointRef, null, conf, false))
+    val bmm = spy[BlockManagerMaster](new BlockManagerMaster(rpcEndpointRef, null, conf, false))
 
     val bm = mock(classOf[BlockManager])
     val dbm = new DiskBlockManager(conf, deleteFilesOnStop = false, isDriver = false)
@@ -197,7 +206,9 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     intercept[java.io.EOFException] {
       FallbackStorage.read(conf, ShuffleBlockId(1, 1L, 0))
     }
-    FallbackStorage.read(conf, ShuffleBlockId(1, 2L, 0))
+    val readResult = FallbackStorage.read(conf, ShuffleBlockId(1, 2L, 0))
+    assert(readResult.isInstanceOf[FileSystemSegmentManagedBuffer])
+    readResult.createInputStream().close()
   }
 
   test("SPARK-39200: fallback storage APIs - readFully") {
@@ -242,7 +253,45 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     assert(fallbackStorage.exists(1, 2L))
 
     val readResult = FallbackStorage.read(conf, ShuffleBlockId(1, 2L, 0))
+    assert(readResult.isInstanceOf[FileSystemSegmentManagedBuffer])
     assert(readResult.nioByteBuffer().array().sameElements(content))
+  }
+
+  test("SPARK-55469: FileSystemSegmentManagedBuffer reads block data lazily") {
+    withTempDir { dir =>
+      val fs = FileSystem.getLocal(new Configuration())
+      val file = new Path(dir.getAbsolutePath, "file")
+      val data = Array[Byte](1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+      tryWithResource(fs.create(file)) { os => os.write(data) }
+
+      Seq((0, 4), (1, 2), (4, 4), (7, 2), (8, 0)).foreach { case (offset, length) =>
+        val clue = s"offset: $offset, length: $length"
+
+        // creating the managed buffer does not open the file
+        val mfs = spy[FileSystem](fs)
+        val buf = new FileSystemSegmentManagedBuffer(mfs, file, offset, length)
+        verify(mfs, never()).open(mc.any[Path]())
+        assert(buf.size() === length, clue)
+
+        // creating the input stream opens the file
+        {
+          val bytes = buf.createInputStream().readAllBytes()
+          verify(mfs, times(1)).open(mc.any[Path]())
+          assert(bytes.mkString(",") === data.slice(offset, offset + length).mkString(","), clue)
+        }
+
+        // getting a NIO ByteBuffer opens the file again
+        {
+          val bytes = buf.nioByteBuffer().array()
+          verify(mfs, times(2)).open(mc.any[Path]())
+          assert(bytes.mkString(",") === data.slice(offset, offset + length).mkString(","), clue)
+        }
+
+        // getting a Netty ByteBufs opens the file again
+        assert(buf.convertToNetty().asInstanceOf[ByteBuf].release() === length > 0, clue)
+        verify(mfs, times(3)).open(mc.any[Path]())
+      }
+    }
   }
 
   test("SPARK-34142: fallback storage API - cleanUp app") {

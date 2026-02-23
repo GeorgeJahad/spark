@@ -694,16 +694,7 @@ private[spark] class BlockManager(
   override def getLocalBlockData(blockId: BlockId): ManagedBuffer = {
     if (blockId.isShuffle) {
       logDebug(s"Getting local shuffle block ${blockId}")
-      try {
-        shuffleManager.shuffleBlockResolver.getBlockData(blockId)
-      } catch {
-        case e: IOException =>
-          if (FallbackStorage.isConfigured(conf)) {
-            FallbackStorage.read(conf, blockId)
-          } else {
-            throw e
-          }
-      }
+      shuffleManager.shuffleBlockResolver.getBlockData(blockId)
     } else {
       getLocalBytes(blockId) match {
         case Some(blockData) =>
@@ -715,6 +706,25 @@ private[spark] class BlockManager(
           reportBlockStatus(blockId, BlockStatus.empty)
           throw SparkCoreErrors.blockNotFoundError(blockId)
       }
+    }
+  }
+
+  /**
+   * Interface to get fallback storage block data. Throws an exception if the block cannot be found
+   * or cannot be read successfully.
+   */
+  override def getFallbackStorageBlockData(blockId: BlockId): ManagedBuffer = {
+    require(FallbackStorage.isConfigured(conf))
+
+    if (blockId.isShuffle) {
+      logDebug(s"Getting fallback storage block ${blockId}")
+      FallbackStorage.read(conf, blockId)
+    } else {
+      // If this block manager receives a request for a block that it doesn't have then it's
+      // likely that the master has outdated block statuses for this block. Therefore, we send
+      // an RPC so that this block is marked as being unavailable from this block manager.
+      reportBlockStatus(blockId, BlockStatus.empty)
+      throw SparkCoreErrors.blockNotFoundError(blockId)
     }
   }
 

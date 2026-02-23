@@ -93,6 +93,9 @@ private[spark] object Constants {
   val DEFAULT_DRIVER_CONTAINER_NAME = "spark-kubernetes-driver"
   val DEFAULT_EXECUTOR_CONTAINER_NAME = "spark-kubernetes-executor"
   val NON_JVM_MEMORY_OVERHEAD_FACTOR = 0.4d
+  val OWNER_REFERENCE_ANNOTATION = "spark.owner-reference"
+  val OWNER_REFERENCE_ANNOTATION_DRIVER_VALUE = "driver"
+  val OWNER_REFERENCE_ANNOTATION_EXECUTOR_VALUE = "executor"
 
   // Hadoop Configuration
   val HADOOP_CONF_VOLUME = "hadoop-properties"

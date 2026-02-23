@@ -500,22 +500,44 @@ package object config {
         "cache block replication should be positive.")
       .createWithDefaultString("30s")
 
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.cleanUp")
+      .doc("If true, Spark cleans up its fallback storage data once individual shuffles are " +
+        "freed (interval configured via spark.cleaner.periodicGC.interval), and during " +
+        "shutting down.")
+      .version("3.2.0")
+      .booleanConf
+      .createWithDefault(false)
+
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_THREADS =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.cleanUp.threads")
+      .doc("Number of threads that clean up fallback storage data.")
+      .version("4.2.0")
+      .intConf
+      .createWithDefault(5)
+
+  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP_WAIT_ON_SHUTDOWN =
+    ConfigBuilder("spark.storage.decommission.fallbackStorage.cleanUp.waitOnShutdown")
+      .doc("If true, Spark waits for all fallback storage data to be cleaned up " +
+        "when shutting down. This may defer the termination of the Spark application " +
+        "for a significant time. " +
+        s"Only used when $STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP is true. " +
+        "Use an external clean up mechanism when false, for instance a TTL.")
+      .version("4.2.0")
+      .booleanConf
+      .createWithDefault(true)
+
   private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH =
     ConfigBuilder("spark.storage.decommission.fallbackStorage.path")
       .doc("The location for fallback storage during block manager decommissioning. " +
         "For example, `s3a://spark-storage/`. In case of empty, fallback storage is disabled. " +
-        "The storage should be managed by TTL because Spark will not clean it up.")
+        "The storage will not be cleaned up by Spark unless " +
+        s"${STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP.key} is true. " +
+        "Use an external clean up mechanism when false, for instance a TTL.")
       .version("3.1.0")
       .stringConf
       .checkValue(_.endsWith(java.io.File.separator), "Path should end with separator.")
       .createOptional
-
-  private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP =
-    ConfigBuilder("spark.storage.decommission.fallbackStorage.cleanUp")
-      .doc("If true, Spark cleans up its fallback storage data during shutting down.")
-      .version("3.2.0")
-      .booleanConf
-      .createWithDefault(false)
 
   private[spark] val STORAGE_DECOMMISSION_FALLBACK_STORAGE_PROACTIVE_ENABLED =
     ConfigBuilder("spark.storage.decommission.fallbackStorage.proactive.enabled")
@@ -1362,6 +1384,13 @@ package object config {
         _ <= Int.MaxValue - 512,
         "maxRemoteBlockSizeFetchToMem cannot be larger than (Int.MaxValue - 512) bytes.")
       .createWithDefaultString("200m")
+
+  private[spark] val REDUCER_FALLBACK_STORAGE_READ_THREADS =
+    ConfigBuilder("spark.reducer.fallbackStorage.readThreads")
+      .doc("Number of threads used by the reducer to read shuffle blocks from fallback storage.")
+      .version("4.2.0")
+      .intConf
+      .createWithDefault(5)
 
   private[spark] val TASK_METRICS_TRACK_UPDATED_BLOCK_STATUSES =
     ConfigBuilder("spark.taskMetrics.trackUpdatedBlockStatuses")

@@ -1068,7 +1068,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
       assert(mapOutputTracker.getMapSizesByExecutorId(shuffleId, 0).toList ===
         List(
           (makeBlockManagerId("hostA"), List((ShuffleBlockId(0, 0, 0), 2, 0))),
-          (makeBlockManagerId("hostB"), List((ShuffleBlockId(0, 1, 0), 2, 1))),
+          (makeBlockManagerId("hostB"), List((ShuffleBlockId(0, 1, 0), 2, 1)))
         )
       )
       runEvent(ExecutorLost("hostA-exec", event))
@@ -1077,7 +1077,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
       assert(mapOutputTracker.getMapSizesByExecutorId(shuffleId, 0).toList ===
         List(
           (FallbackStorage.FALLBACK_BLOCK_MANAGER_ID, List((ShuffleBlockId(0, 0, 0), 2, 0))),
-          (makeBlockManagerId("hostB"), List((ShuffleBlockId(0, 1, 0), 2, 1))),
+          (makeBlockManagerId("hostB"), List((ShuffleBlockId(0, 1, 0), 2, 1)))
         )
       )
     }
@@ -1174,7 +1174,7 @@ class DAGSchedulerSuite extends SparkFunSuite with TempLocalSparkContext with Ti
           s"host${('A' + idx).toChar}"
         }
         val status = makeMapStatus(
-          hostName, numShufflePartitions, mapTaskId = task.partitionId, checksumVal = checksumVal)
+          hostName, numShufflePartitions, mapTaskId = task.partitionId)
         (Success, status)
     }.toSeq)
   }

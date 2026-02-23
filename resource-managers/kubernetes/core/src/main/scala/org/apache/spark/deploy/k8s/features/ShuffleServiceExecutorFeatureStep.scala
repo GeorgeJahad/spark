@@ -22,6 +22,7 @@ import io.fabric8.kubernetes.api.model.{ContainerBuilder, HasMetadata, ServiceBu
 
 import org.apache.spark.SparkException
 import org.apache.spark.deploy.k8s.{KubernetesConf, KubernetesExecutorConf, SparkPod}
+import org.apache.spark.deploy.k8s.Constants.{OWNER_REFERENCE_ANNOTATION, OWNER_REFERENCE_ANNOTATION_DRIVER_VALUE}
 import org.apache.spark.internal.config.SHUFFLE_SERVICE_PORT
 
 class ShuffleServiceExecutorFeatureStep extends KubernetesExecutorCustomFeatureConfigStep {
@@ -65,10 +66,11 @@ class ShuffleServiceExecutorFeatureStep extends KubernetesExecutorCustomFeatureC
   override def getAdditionalKubernetesResources(): Seq[HasMetadata] = {
     val selector = kubernetesConf.labels
       .filter { case (key, _) => service_selector_labels.contains(key) }
-
+    val annotation = Map(OWNER_REFERENCE_ANNOTATION -> OWNER_REFERENCE_ANNOTATION_DRIVER_VALUE)
     val service = new ServiceBuilder()
       .withNewMetadata()
       .withName(serviceName)
+      .withAnnotations(annotation.asJava)
       .endMetadata()
       .withNewSpec()
       .withSelector(selector.asJava)
